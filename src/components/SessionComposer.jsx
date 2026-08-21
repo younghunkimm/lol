@@ -9,7 +9,7 @@ export function SessionComposer({
     onToggleFriend,
 }) {
     return (
-        <Panel className="border-cyan-400/40 ring-2 ring-cyan-400/10">
+        <Panel>
             <div className="mb-4 flex items-center justify-between gap-3">
                 <h2 className="text-xl font-black tracking-tight">세션 생성</h2>
                 <span className="rounded-full bg-cyan-400/10 px-2.5 py-1 text-xs font-black text-cyan-300">
