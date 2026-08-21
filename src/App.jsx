@@ -7,7 +7,17 @@ import { SessionList } from "./components/SessionList";
 import { SessionModal } from "./components/SessionModal";
 import { StatsTable } from "./components/StatsTable";
 import { Alert, Panel } from "./components/ui";
-import { getLocalData, setLocalData, supabaseRequest } from "./dataClient";
+import {
+    deleteFriend as deleteRemoteFriend,
+    deleteGame as deleteRemoteGame,
+    deleteSession as deleteRemoteSession,
+    getLocalData,
+    insertFriend,
+    insertGame,
+    insertSession,
+    loadRemoteData,
+    setLocalData,
+} from "./dataClient";
 import { createLeaders, createSessionSettlements, createStats } from "./stats";
 import {
     createId,
@@ -44,13 +54,7 @@ function App() {
             }
 
             try {
-                const [friends, sessions, games] = await Promise.all([
-                    supabaseRequest("friends", { query: "?select=*" }),
-                    supabaseRequest("sessions", { query: "?select=*" }),
-                    supabaseRequest("games", { query: "?select=*" }),
-                ]);
-
-                setData({ friends, sessions, games });
+                setData(await loadRemoteData());
             } catch (loadError) {
                 setError(`${loadError.message}. 로컬 저장소로 전환했습니다.`);
                 setData(getLocalData());
@@ -119,7 +123,7 @@ function App() {
 
         const friend = { id: createId(), name, createdAt: nowIso() };
         await commit({ ...data, friends: [...data.friends, friend] }, () =>
-            supabaseRequest("friends", { method: "POST", body: friend }),
+            insertFriend(friend),
         );
         setFriendName("");
     }
@@ -142,11 +146,7 @@ function App() {
                     (friend) => friend.id !== friendId,
                 ),
             },
-            () =>
-                supabaseRequest("friends", {
-                    method: "DELETE",
-                    query: `?id=eq.${friendId}`,
-                }),
+            () => deleteRemoteFriend(friendId),
         );
     }
 
@@ -172,7 +172,7 @@ function App() {
         };
 
         await commit({ ...data, sessions: [session, ...data.sessions] }, () =>
-            supabaseRequest("sessions", { method: "POST", body: session }),
+            insertSession(session),
         );
         setSessionDraft({
             title: formatSessionTitle(),
@@ -199,16 +199,7 @@ function App() {
             games: data.games.filter((game) => game.sessionId !== sessionId),
         };
 
-        await commit(nextData, async () => {
-            await supabaseRequest("games", {
-                method: "DELETE",
-                query: `?sessionId=eq.${sessionId}`,
-            });
-            await supabaseRequest("sessions", {
-                method: "DELETE",
-                query: `?id=eq.${sessionId}`,
-            });
-        });
+        await commit(nextData, () => deleteRemoteSession(sessionId));
 
         if (activeSessionId === sessionId) {
             closeModal();
@@ -253,7 +244,7 @@ function App() {
 
         await commit(
             { ...data, games: [...data.games, game] },
-            () => supabaseRequest("games", { method: "POST", body: game }),
+            () => insertGame(game),
             setModalError,
         );
         setGameDraft({ winnerIds: [], loserIds: [], note: "" });
@@ -266,11 +257,7 @@ function App() {
 
         await commit(
             { ...data, games: data.games.filter((game) => game.id !== gameId) },
-            () =>
-                supabaseRequest("games", {
-                    method: "DELETE",
-                    query: `?id=eq.${gameId}`,
-                }),
+            () => deleteRemoteGame(gameId),
             setModalError,
         );
     }
