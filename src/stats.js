@@ -46,39 +46,53 @@ export function createStats({ friends, games, sessions }) {
 
 export function createLeaders(stats) {
     const getFirstName = (name) => (name.length > 1 ? name.slice(1) : name);
+    const emptyLeader = {
+        name: "-",
+        wins: 0,
+        losses: 0,
+        paid: 0,
+        received: 0,
+        net: 0,
+    };
 
-    const getLeader = (key) =>
-        stats.reduce((leader, row) => (row[key] > leader[key] ? row : leader), {
-            name: "-",
-            wins: 0,
-            losses: 0,
-            paid: 0,
-            received: 0,
-        });
+    const getLeader = (getScore) =>
+        stats.reduce(
+            (leader, row) => (getScore(row) > getScore(leader) ? row : leader),
+            emptyLeader,
+        );
+
+    const winsLeader = getLeader((row) => row.wins);
+    const receivedLeader = getLeader((row) => row.received - row.paid);
+    const lossesLeader = getLeader((row) => row.losses);
+    const paidLeader = getLeader((row) => row.paid - row.received);
 
     return [
         {
             label: "개고수",
-            value: getLeader("wins").name,
-            metric: `${getLeader("wins").wins}승`,
+            mean: "최다 승자",
+            value: winsLeader.name,
+            metric: `${winsLeader.wins}승`,
             positive: true,
         },
         {
-            label: `외쳐 갓${getFirstName(getLeader("received").name)}`,
-            value: getLeader("received").name,
-            metric: formatMoney(getLeader("received").received),
+            label: `외쳐 갓${getFirstName(receivedLeader.name)}`,
+            mean: "최다 수령",
+            value: receivedLeader.name,
+            metric: formatMoney(receivedLeader.net),
             positive: true,
         },
         {
             label: "병슨ㅋ",
-            value: getLeader("losses").name,
-            metric: `${getLeader("losses").losses}패`,
+            mean: "최다 패자",
+            value: lossesLeader.name,
+            metric: `${lossesLeader.losses}패`,
             positive: false,
         },
         {
             label: "기부천사",
-            value: getLeader("paid").name,
-            metric: formatMoney(getLeader("paid").paid),
+            mean: "최다 지불",
+            value: paidLeader.name,
+            metric: formatMoney(paidLeader.paid - paidLeader.received),
             positive: false,
         },
     ];
