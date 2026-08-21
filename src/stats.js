@@ -25,10 +25,12 @@ export function createStats({ friends, games, sessions }) {
         const settlement = getGameSettlement(game, session);
 
         game.loserIds.forEach((friendId) => {
-            if (rowMap.has(friendId)) rowMap.get(friendId).paid += settlement.payerAmount;
+            if (rowMap.has(friendId))
+                rowMap.get(friendId).paid += settlement.payerAmount;
         });
         game.winnerIds.forEach((friendId) => {
-            if (rowMap.has(friendId)) rowMap.get(friendId).received += settlement.receiverAmount;
+            if (rowMap.has(friendId))
+                rowMap.get(friendId).received += settlement.receiverAmount;
         });
     });
 
@@ -43,6 +45,8 @@ export function createStats({ friends, games, sessions }) {
 }
 
 export function createLeaders(stats) {
+    const getFirstName = (name) => (name.length > 1 ? name.slice(1) : name);
+
     const getLeader = (key) =>
         stats.reduce((leader, row) => (row[key] > leader[key] ? row : leader), {
             name: "-",
@@ -53,14 +57,30 @@ export function createLeaders(stats) {
         });
 
     return [
-        { label: "최다 승자", value: getLeader("wins").name, metric: `${getLeader("wins").wins}승` },
         {
-            label: "최다 수령자",
+            label: "개고수",
+            value: getLeader("wins").name,
+            metric: `${getLeader("wins").wins}승`,
+            positive: true,
+        },
+        {
+            label: `외쳐 갓${getFirstName(getLeader("received").name)}`,
             value: getLeader("received").name,
             metric: formatMoney(getLeader("received").received),
+            positive: true,
         },
-        { label: "최다 패자", value: getLeader("losses").name, metric: `${getLeader("losses").losses}패` },
-        { label: "최다 지불자", value: getLeader("paid").name, metric: formatMoney(getLeader("paid").paid) },
+        {
+            label: "병슨ㅋ",
+            value: getLeader("losses").name,
+            metric: `${getLeader("losses").losses}패`,
+            positive: false,
+        },
+        {
+            label: "기부천사",
+            value: getLeader("paid").name,
+            metric: formatMoney(getLeader("paid").paid),
+            positive: false,
+        },
     ];
 }
 
@@ -97,4 +117,3 @@ export function createSessionSettlements({ participants, games, session }) {
         net: row.received - row.paid,
     }));
 }
-

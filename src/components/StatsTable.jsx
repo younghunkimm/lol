@@ -20,9 +20,9 @@ export function StatsTable({ stats }) {
                             <th className="px-3 py-3">승</th>
                             <th className="px-3 py-3">패</th>
                             <th className="px-3 py-3">승률</th>
-                            <th className="px-3 py-3">지불</th>
-                            <th className="px-3 py-3">수령</th>
-                            <th className="px-3 py-3">계산</th>
+                            <th className="px-3 py-3">손해</th>
+                            <th className="px-3 py-3">이득</th>
+                            <th className="px-3 py-3">손익</th>
                         </tr>
                     </thead>
                     <tbody>
