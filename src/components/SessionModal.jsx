@@ -79,7 +79,7 @@ function PlayerNameList({ ids, friends, align = "left" }) {
                     : "justify-start text-left text-cyan-50"
             }`}
         >
-            {ids.map((id, index) => (
+            {ids.map((id) => (
                 <span className="break-all" key={id}>
                     {getName(friends, id)}
                 </span>

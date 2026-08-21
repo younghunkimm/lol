@@ -1,46 +1,62 @@
-// Follow this setup guide to integrate the Deno language server with your editor:
-// https://deno.land/manual/getting_started/setup_your_environment
-// This enables autocomplete, go to definition, etc.
-
-// Setup type definitions for built-in Supabase Runtime APIs
 import "@supabase/functions-js/edge-runtime.d.ts";
-import { withSupabase } from "@supabase/server";
+import {
+  createCorsHeaders,
+  jsonResponse,
+  optionsResponse,
+} from "../_shared/http.ts";
+import { signJwt } from "../_shared/jwt.ts";
 
-console.log("Hello from Functions!");
+const corsHeaders = createCorsHeaders(["POST", "OPTIONS"]);
 
-// This endpoint uses 'publishable' | 'secret' access, apiKey is required.
-// Use publishable for Client-facing, key-validated endpoints
-// Use secret for Server-to-server, internal calls
 export default {
-  fetch: withSupabase({ auth: ["publishable", "secret"] }, async (req, ctx) => {
-    // Called by another service with a secret key
-    // ctx.supabaseAdmin bypasses RLS — use for privileged operations
-    /*
-    if (ctx.authMode === "secret") {
-      const { user_id } = await req.json();
-      const { data } = await ctx.supabaseAdmin.auth.admin.getUserById(user_id);
-
-      return Response.json({
-        email: data?.user?.email,
-      });
+  async fetch(req: Request) {
+    if (req.method === "OPTIONS") {
+      return optionsResponse(corsHeaders);
     }
-    */
 
-    const { name } = await req.json();
+    if (req.method !== "POST") {
+      return jsonResponse({ error: "허용되지 않는 방법" }, 405, corsHeaders);
+    }
 
-    return Response.json({
-      message: `Hello ${name}!`,
-    });
-  }),
+    const password = Deno.env.get("PASSWORD");
+    const jwtSecret = Deno.env.get("JWT_SECRET") ?? password;
+
+    if (!password || !jwtSecret) {
+      return jsonResponse({ error: "인증 비밀번호가 구성되지 않았습니다." }, 500, corsHeaders);
+    }
+
+    let body: { password?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({ error: "잘못된 JSON 본문" }, 400, corsHeaders);
+    }
+
+    if (body.password !== password) {
+      return jsonResponse({ error: "비밀번호 검증 실패" }, 401, corsHeaders);
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const expiresIn = 60 * 60 * 24 * 7;
+    const expiresAt = now + expiresIn;
+    const token = await signJwt(
+      {
+        sub: "shared-password-user",
+        role: "app_user",
+        iat: now,
+        exp: expiresAt,
+      },
+      jwtSecret,
+    );
+
+    return jsonResponse(
+      {
+        token,
+        tokenType: "Bearer",
+        expiresAt,
+      },
+      200,
+      corsHeaders,
+    );
+  },
 };
-
-/* To invoke locally:
-
-  1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-  2. Make an HTTP request:
-
-  curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/auth' \
-    --header 'apiKey: sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH' \
-    --data '{"name":"Functions"}'
-
-*/

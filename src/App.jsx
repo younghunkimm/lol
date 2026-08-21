@@ -1,23 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
-import { DEFAULT_PRICE, emptyData, hasSupabase } from "./constants";
+import { DEFAULT_PRICE, emptyData } from "./constants";
 import { FriendManager } from "./components/FriendManager";
 import { LeaderSummary } from "./components/LeaderSummary";
 import { SessionComposer } from "./components/SessionComposer";
 import { SessionList } from "./components/SessionList";
 import { SessionModal } from "./components/SessionModal";
 import { StatsTable } from "./components/StatsTable";
-import { Panel } from "./components/ui";
+import { Button, Panel, TextInput } from "./components/ui";
 import { confirmAction, showToast } from "./alerts";
 import {
+    clearAuthToken,
     deleteFriend as deleteRemoteFriend,
     deleteGame as deleteRemoteGame,
     deleteSession as deleteRemoteSession,
-    getLocalData,
+    getAuthToken,
     insertFriend,
     insertGame,
     insertSession,
+    loginWithPassword,
     loadRemoteData,
-    setLocalData,
+    setStoredAuthToken,
 } from "./dataClient";
 import { createLeaders, createSessionSettlements, createStats } from "./stats";
 import {
@@ -30,6 +32,10 @@ import {
 
 function App() {
     const [data, setData] = useState(emptyData);
+    const [authToken, setAuthToken] = useState(() => getAuthToken());
+    const [password, setPassword] = useState("");
+    const [authError, setAuthError] = useState("");
+    const [isAuthenticating, setIsAuthenticating] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [modalError, setModalError] = useState(null);
@@ -48,27 +54,30 @@ function App() {
 
     useEffect(() => {
         async function loadData() {
-            if (!hasSupabase) {
-                setData(getLocalData());
+            if (!authToken) {
                 setIsLoading(false);
                 return;
             }
 
             try {
-                setData(await loadRemoteData());
+                setData(await loadRemoteData(authToken));
             } catch (loadError) {
+                if (loadError.status === 401) {
+                    resetAuth();
+                    return;
+                }
+
                 setError({
-                    message: `${loadError.message}. 로컬 저장소로 전환했습니다.`,
+                    message: loadError.message,
                     id: Date.now(),
                 });
-                setData(getLocalData());
             } finally {
                 setIsLoading(false);
             }
         }
 
         loadData();
-    }, []);
+    }, [authToken]);
 
     useEffect(() => {
         if (error?.message) {
@@ -107,26 +116,57 @@ function App() {
     const stats = useMemo(() => createStats(data), [data]);
     const leaders = useMemo(() => createLeaders(stats), [stats]);
 
+    function resetAuth() {
+        clearAuthToken();
+        setAuthToken("");
+        setIsLoading(false);
+    }
+
     async function commit(nextData, action, errorHandler = setError) {
         errorHandler(null);
-
-        if (!hasSupabase || error?.message?.includes("로컬 저장소")) {
-            setData(nextData);
-            setLocalData(nextData);
-            return;
-        }
 
         try {
             await action();
             setData(nextData);
-            setLocalData(nextData);
+            return true;
         } catch (actionError) {
+            console.log(actionError);
+            if (actionError.status === 401) {
+                resetAuth();
+                return false;
+            }
+
             errorHandler({
-                message: `${actionError.message}. 이번 변경은 로컬에 저장했습니다.`,
+                message: actionError.message,
                 id: Date.now(),
             });
-            setData(nextData);
-            setLocalData(nextData);
+            return false;
+        }
+    }
+
+    async function login(event) {
+        event.preventDefault();
+        const trimmedPassword = password.trim();
+
+        if (!trimmedPassword) {
+            setAuthError("비밀번호를 입력해 주세요.");
+            return;
+        }
+
+        setAuthError("");
+        setIsAuthenticating(true);
+
+        try {
+            const authSession = await loginWithPassword(trimmedPassword);
+            setStoredAuthToken(authSession);
+            setPassword("");
+            setIsLoading(true);
+            setAuthToken(authSession.token);
+        } catch (loginError) {
+            clearAuthToken();
+            setAuthError(loginError.message);
+        } finally {
+            setIsAuthenticating(false);
         }
     }
 
@@ -139,10 +179,13 @@ function App() {
         }
 
         const friend = { id: createId(), name, createdAt: nowIso() };
-        await commit({ ...data, friends: [...data.friends, friend] }, () =>
-            insertFriend(friend),
+        const saved = await commit(
+            { ...data, friends: [...data.friends, friend] },
+            () => insertFriend(authToken, friend),
         );
-        setFriendName("");
+        if (saved) {
+            setFriendName("");
+        }
     }
 
     async function removeFriend(friendId) {
@@ -165,7 +208,7 @@ function App() {
                     (friend) => friend.id !== friendId,
                 ),
             },
-            () => deleteRemoteFriend(friendId),
+            () => deleteRemoteFriend(authToken, friendId),
         );
     }
 
@@ -193,15 +236,18 @@ function App() {
             createdAt: nowIso(),
         };
 
-        await commit({ ...data, sessions: [session, ...data.sessions] }, () =>
-            insertSession(session),
+        const saved = await commit(
+            { ...data, sessions: [session, ...data.sessions] },
+            () => insertSession(authToken, session),
         );
-        setSessionDraft({
-            title: formatSessionTitle(),
-            price: DEFAULT_PRICE,
-            friendIds: [],
-        });
-        setActiveSessionId(session.id);
+        if (saved) {
+            setSessionDraft({
+                title: formatSessionTitle(),
+                price: DEFAULT_PRICE,
+                friendIds: [],
+            });
+            setActiveSessionId(session.id);
+        }
     }
 
     async function deleteSession(sessionId) {
@@ -223,9 +269,11 @@ function App() {
             games: data.games.filter((game) => game.sessionId !== sessionId),
         };
 
-        await commit(nextData, () => deleteRemoteSession(sessionId));
+        const saved = await commit(nextData, () =>
+            deleteRemoteSession(authToken, sessionId),
+        );
 
-        if (activeSessionId === sessionId) {
+        if (saved && activeSessionId === sessionId) {
             closeModal();
         }
     }
@@ -273,12 +321,14 @@ function App() {
             createdAt: nowIso(),
         };
 
-        await commit(
+        const saved = await commit(
             { ...data, games: [...data.games, game] },
-            () => insertGame(game),
+            () => insertGame(authToken, game),
             setModalError,
         );
-        setGameDraft({ winnerIds: [], loserIds: [], note: "" });
+        if (saved) {
+            setGameDraft({ winnerIds: [], loserIds: [], note: "" });
+        }
     }
 
     async function deleteGame(gameId) {
@@ -293,7 +343,7 @@ function App() {
 
         await commit(
             { ...data, games: data.games.filter((game) => game.id !== gameId) },
-            () => deleteRemoteGame(gameId),
+            () => deleteRemoteGame(authToken, gameId),
             setModalError,
         );
     }
@@ -340,7 +390,37 @@ function App() {
 
     return (
         <main className="mx-auto min-h-svh w-full max-w-7xl px-4 py-5 text-slate-100 sm:px-6 lg:px-8 lg:py-8">
-            {isLoading ? (
+            {!authToken ? (
+                <div className="grid min-h-[calc(100svh-8rem)] place-items-center">
+                    <Panel className="w-full max-w-sm">
+                        <form className="grid gap-4" onSubmit={login}>
+                            <div>
+                                <h1 className="text-xl font-black text-slate-50">
+                                    비밀번호 확인
+                                </h1>
+                            </div>
+                            <TextInput
+                                autoFocus
+                                type="password"
+                                value={password}
+                                onChange={(event) =>
+                                    setPassword(event.target.value)
+                                }
+                                placeholder="비밀번호 입력"
+                                aria-label="비밀번호 입력"
+                            />
+                            {authError ? (
+                                <p className="text-sm font-bold text-rose-300">
+                                    {authError}
+                                </p>
+                            ) : null}
+                            <Button type="submit" disabled={isAuthenticating}>
+                                {isAuthenticating ? "확인 중" : "입장"}
+                            </Button>
+                        </form>
+                    </Panel>
+                </div>
+            ) : isLoading ? (
                 <Panel className="grid min-h-56 place-items-center text-sm font-bold text-slate-400">
                     데이터를 불러오는 중입니다.
                 </Panel>

@@ -1,175 +1,166 @@
-import { createClient } from "@supabase/supabase-js";
-import {
-    emptyData,
-    hasSupabase,
-    STORAGE_KEY,
-    SUPABASE_ANON_KEY,
-    SUPABASE_URL,
-} from "./constants";
+import { AUTH_EXPIRES_AT_KEY, AUTH_TOKEN_KEY, SUPABASE_URL } from "./constants";
 
-const supabase = hasSupabase
-    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
+export function getAuthToken() {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const expiresAt = Number(localStorage.getItem(AUTH_EXPIRES_AT_KEY));
 
-export function getLocalData() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-
-    if (!raw) {
-        return emptyData;
+    if (!token) {
+        return "";
     }
 
-    try {
-        return { ...emptyData, ...JSON.parse(raw) };
-    } catch {
-        return emptyData;
-    }
-}
-
-export function setLocalData(data) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
-
-function fromFriendRow(row) {
-    return {
-        id: row.id,
-        name: row.name,
-        createdAt: row.created_at,
-    };
-}
-
-function toFriendRow(friend) {
-    return {
-        id: friend.id,
-        name: friend.name,
-        created_at: friend.createdAt,
-    };
-}
-
-function fromSessionRow(row) {
-    return {
-        id: row.id,
-        title: row.title,
-        price: row.price,
-        friendIds: row.friend_ids ?? [],
-        createdAt: row.created_at,
-    };
-}
-
-function toSessionRow(session) {
-    return {
-        id: session.id,
-        title: session.title,
-        price: session.price,
-        friend_ids: session.friendIds,
-        created_at: session.createdAt,
-    };
-}
-
-function fromGameRow(row) {
-    return {
-        id: row.id,
-        sessionId: row.session_id,
-        winnerIds: row.winner_ids ?? [],
-        loserIds: row.loser_ids ?? [],
-        note: row.note ?? "",
-        createdAt: row.created_at,
-    };
-}
-
-function toGameRow(game) {
-    return {
-        id: game.id,
-        session_id: game.sessionId,
-        winner_ids: game.winnerIds,
-        loser_ids: game.loserIds,
-        note: game.note,
-        created_at: game.createdAt,
-    };
-}
-
-function requireSupabase() {
-    if (!supabase) {
-        throw new Error("Supabase 환경변수가 설정되지 않았습니다");
+    if (expiresAt && expiresAt * 1000 <= Date.now()) {
+        clearAuthToken();
+        return "";
     }
 
-    return supabase;
+    return token;
 }
 
-function throwIfError(operation, error) {
-    if (error) {
-        throw new Error(`${operation} 실패: ${error.message}`);
+export function setStoredAuthToken({ token, expiresAt }) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+
+    if (expiresAt) {
+        localStorage.setItem(AUTH_EXPIRES_AT_KEY, String(expiresAt));
+    } else {
+        localStorage.removeItem(AUTH_EXPIRES_AT_KEY);
     }
 }
 
-export async function loadRemoteData() {
-    const client = requireSupabase();
-    const [friendsResult, sessionsResult, gamesResult] = await Promise.all([
-        client
-            .from("friends")
-            .select("*")
-            .order("created_at", { ascending: true }),
-        client
-            .from("sessions")
-            .select("*")
-            .order("created_at", { ascending: false }),
-        client
-            .from("games")
-            .select("*")
-            .order("created_at", { ascending: true }),
-    ]);
+export function clearAuthToken() {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_EXPIRES_AT_KEY);
+}
 
-    throwIfError("프로게이머 목록 불러오기", friendsResult.error);
-    throwIfError("세션 목록 불러오기", sessionsResult.error);
-    throwIfError("게임 목록 불러오기", gamesResult.error);
+function createAuthError(message = "로그인이 필요합니다") {
+    const error = new Error(message);
+    error.status = 401;
+    return error;
+}
+
+function isJwtLikeToken(token) {
+    return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token);
+}
+
+async function parseJsonResponse(response) {
+    const body = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        const error = new Error(body.error ?? "요청에 실패했습니다");
+        error.status = response.status;
+        throw error;
+    }
+
+    return body;
+}
+
+async function apiRequest(token, path = "", options = {}) {
+    if (!SUPABASE_URL) {
+        throw new Error("Supabase URL이 설정되지 않았습니다");
+    }
+
+    if (!token) {
+        throw createAuthError();
+    }
+
+    if (!isJwtLikeToken(token)) {
+        clearAuthToken();
+        throw createAuthError("저장된 로그인 정보가 올바르지 않습니다");
+    }
+
+    const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/friends${path}`,
+        {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+                ...options.headers,
+            },
+        },
+    );
+
+    if (response.status === 401) {
+        clearAuthToken();
+    }
+
+    const body = await parseJsonResponse(response);
+    return { ...body, status: response.status };
+}
+
+export async function loginWithPassword(password) {
+    if (!SUPABASE_URL) {
+        throw new Error("Supabase URL이 설정되지 않았습니다");
+    }
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/auth`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+    });
+
+    const body = await parseJsonResponse(response);
+
+    if (!body.token) {
+        throw new Error("인증 토큰을 받지 못했습니다");
+    }
 
     return {
-        friends: (friendsResult.data ?? []).map(fromFriendRow),
-        sessions: (sessionsResult.data ?? []).map(fromSessionRow),
-        games: (gamesResult.data ?? []).map(fromGameRow),
+        token: body.token,
+        expiresAt: body.expiresAt,
     };
 }
 
-export async function insertFriend(friend) {
-    const { error } = await requireSupabase()
-        .from("friends")
-        .insert(toFriendRow(friend));
-    throwIfError("프로게이머 저장", error);
+export async function loadRemoteData(token) {
+    const data = await apiRequest(token);
+
+    return {
+        friends: data.friends ?? [],
+        sessions: data.sessions ?? [],
+        games: data.games ?? [],
+    };
 }
 
-export async function deleteFriend(friendId) {
-    const { error } = await requireSupabase()
-        .from("friends")
-        .delete()
-        .eq("id", friendId);
-    throwIfError("프로게이머 삭제", error);
+export async function insertFriend(token, friend) {
+    await apiRequest(token, "?resource=friends", {
+        method: "POST",
+        body: JSON.stringify(friend),
+    });
 }
 
-export async function insertSession(session) {
-    const { error } = await requireSupabase()
-        .from("sessions")
-        .insert(toSessionRow(session));
-    throwIfError("세션 저장", error);
+export async function deleteFriend(token, friendId) {
+    await apiRequest(
+        token,
+        `?resource=friends&id=${encodeURIComponent(friendId)}`,
+        { method: "DELETE" },
+    );
 }
 
-export async function deleteSession(sessionId) {
-    const { error } = await requireSupabase()
-        .from("sessions")
-        .delete()
-        .eq("id", sessionId);
-    throwIfError("세션 삭제", error);
+export async function insertSession(token, session) {
+    await apiRequest(token, "?resource=sessions", {
+        method: "POST",
+        body: JSON.stringify(session),
+    });
 }
 
-export async function insertGame(game) {
-    const { error } = await requireSupabase()
-        .from("games")
-        .insert(toGameRow(game));
-    throwIfError("승패 기록 저장", error);
+export async function deleteSession(token, sessionId) {
+    await apiRequest(
+        token,
+        `?resource=sessions&id=${encodeURIComponent(sessionId)}`,
+        { method: "DELETE" },
+    );
 }
 
-export async function deleteGame(gameId) {
-    const { error } = await requireSupabase()
-        .from("games")
-        .delete()
-        .eq("id", gameId);
-    throwIfError("승패 기록 삭제", error);
+export async function insertGame(token, game) {
+    await apiRequest(token, "?resource=games", {
+        method: "POST",
+        body: JSON.stringify(game),
+    });
+}
+
+export async function deleteGame(token, gameId) {
+    await apiRequest(
+        token,
+        `?resource=games&id=${encodeURIComponent(gameId)}`,
+        { method: "DELETE" },
+    );
 }
