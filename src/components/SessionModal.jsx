@@ -88,31 +88,31 @@ function PlayerNameList({ ids, friends, align = "left" }) {
     );
 }
 
-function GameRecordCard({ game, index, friends, onDeleteGame }) {
+function GameRecordCard({ game, gameNumber, index, friends, onDeleteGame }) {
     return (
         <article
             className={`rounded-2xl border bg-[#151a23] p-4 ${index === 0 ? "border-cyan-400/60" : "border-white/10"}`}
             key={game.id}
         >
-            <div className="flex justify-start">
-                <DangerButton
-                    className="rounded-lg px-2.5 py-1.5 text-xs"
-                    type="button"
-                    onClick={() => onDeleteGame(game.id)}
-                >
-                    삭제
-                </DangerButton>
-            </div>
-            <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
                 <div className="min-w-0 rounded-xl border border-cyan-400/10 bg-cyan-400/10 px-3 py-3 text-left">
                     <span className="block text-xs font-black text-cyan-300">
                         승자
                     </span>
                     <PlayerNameList ids={game.winnerIds} friends={friends} />
                 </div>
-                <span className="rounded-full bg-violet-400/15 px-3 py-1 text-xs font-black text-violet-100">
-                    VS
-                </span>
+                <div className="grid justify-items-center gap-2">
+                    <span className="rounded-full bg-violet-400/15 px-3 py-1 text-xs font-black text-violet-100">
+                        {gameNumber}경기
+                    </span>
+                    <DangerButton
+                        className="rounded-lg px-2.5 py-1.5 text-xs"
+                        type="button"
+                        onClick={() => onDeleteGame(game.id)}
+                    >
+                        삭제
+                    </DangerButton>
+                </div>
                 <div className="min-w-0 rounded-xl border border-rose-400/10 bg-rose-400/10 px-3 py-3 text-right">
                     <span className="block text-xs font-black text-rose-300">
                         패자
@@ -228,6 +228,7 @@ export function SessionModal({
                         {games.map((game, index) => (
                             <GameRecordCard
                                 game={game}
+                                gameNumber={games.length - index}
                                 index={index}
                                 friends={friends}
                                 onDeleteGame={onDeleteGame}
