@@ -65,6 +65,22 @@ export function createLeaders(stats) {
         return rows.filter((row) => getScore(row) === bestScore);
     };
 
+    const getLossLeaders = (rows) => {
+        if (!rows.length) {
+            return [emptyLeader];
+        }
+
+        const lowestWinRate = Math.min(...rows.map((row) => row.winRate));
+        const lowestWinRateRows = rows.filter(
+            (row) => row.winRate === lowestWinRate,
+        );
+        const maxLosses = Math.max(
+            ...lowestWinRateRows.map((row) => row.losses),
+        );
+
+        return lowestWinRateRows.filter((row) => row.losses === maxLosses);
+    };
+
     const formatNames = (leaders) => leaders.map((leader) => leader.name);
     const firstLeader = (leaders) => leaders[0] ?? emptyLeader;
 
@@ -76,7 +92,7 @@ export function createLeaders(stats) {
     const receivedLeaders = hasPlayedGames
         ? getLeaders((row) => row.received - row.paid)
         : [emptyLeader];
-    const lossesLeaders = getLeaders((row) => -row.winRate, playedStats);
+    const lossesLeaders = getLossLeaders(playedStats);
     const paidLeaders = hasPlayedGames
         ? getLeaders((row) => row.paid - row.received)
         : [emptyLeader];
