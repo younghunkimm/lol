@@ -78,6 +78,18 @@ export function sortByCreatedAt(items) {
     );
 }
 
+export function getNetClass(net) {
+    if (net > 0) {
+        return "text-cyan-300";
+    }
+
+    if (net < 0) {
+        return "text-rose-300";
+    }
+
+    return "text-slate-500";
+}
+
 export function getWinRateClass(winRate) {
     if (winRate === 0) {
         return "text-slate-500";

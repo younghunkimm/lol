@@ -1,4 +1,4 @@
-import { formatMoney, getWinRateClass } from "../utils";
+import { formatMoney, getNetClass, getWinRateClass } from "../utils";
 import { EmptyState, Panel } from "./ui";
 
 export function StatsTable({ stats }) {
@@ -15,14 +15,14 @@ export function StatsTable({ stats }) {
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] border-collapse text-left">
                     <thead>
-                        <tr className="border-b border-white/10 text-xs font-black text-slate-400">
+                        <tr className="border-b border-white/10 text-xs font-black text-slate-300">
                             <th className="px-3 py-3">프로게이머</th>
+                            <th className="px-3 py-3">손익</th>
                             <th className="px-3 py-3">승률</th>
                             <th className="px-3 py-3">승</th>
                             <th className="px-3 py-3">패</th>
-                            <th className="px-3 py-3 text-rose-300">손해</th>
-                            <th className="px-3 py-3 text-cyan-300">이득</th>
-                            <th className="px-3 py-3 text-violet-300">손익</th>
+                            <th className="px-3 py-3">손해</th>
+                            <th className="px-3 py-3">이득</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -37,20 +37,22 @@ export function StatsTable({ stats }) {
                             >
                                 <td className="px-3 py-3">{row.name}</td>
                                 <td
+                                    className={`px-3 py-3 font-black ${getNetClass(row.net)}`}
+                                >
+                                    {formatMoney(row.net)}
+                                </td>
+                                <td
                                     className={`px-3 py-3 font-black ${getWinRateClass(row.winRate)}`}
                                 >
                                     {row.winRate}%
                                 </td>
                                 <td className="px-3 py-3">{row.wins}</td>
                                 <td className="px-3 py-3">{row.losses}</td>
-                                <td className="px-3 py-3 font-black text-rose-300">
+                                <td className="px-3 py-3">
                                     {formatMoney(row.paid)}
                                 </td>
-                                <td className="px-3 py-3 font-black text-cyan-300">
+                                <td className="px-3 py-3">
                                     {formatMoney(row.received)}
-                                </td>
-                                <td className="px-3 py-3 font-black text-violet-300">
-                                    {formatMoney(row.net)}
                                 </td>
                             </tr>
                         ))}

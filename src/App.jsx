@@ -61,12 +61,22 @@ function prependSessionOnce(sessions, session) {
 
 function sortStats(stats) {
     return [...stats].sort((a, b) => {
+        const aTotalGames = a.totalGames ?? a.wins + a.losses;
+        const bTotalGames = b.totalGames ?? b.wins + b.losses;
+        const aHasPlayed = aTotalGames > 0;
+        const bHasPlayed = bTotalGames > 0;
+
+        if (aHasPlayed !== bHasPlayed) {
+            return aHasPlayed ? -1 : 1;
+        }
+
+        if (b.net !== a.net) {
+            return b.net - a.net;
+        }
+
         if (b.winRate !== a.winRate) {
             return b.winRate - a.winRate;
         }
-
-        const aTotalGames = a.totalGames ?? a.wins + a.losses;
-        const bTotalGames = b.totalGames ?? b.wins + b.losses;
 
         if (bTotalGames !== aTotalGames) {
             return bTotalGames - aTotalGames;
@@ -242,9 +252,11 @@ function App() {
                         }
 
                         if (table === "friends") {
-                            Promise.all([refreshFriends(), refreshStats()]).catch(
-                                (remoteError) =>
-                                    handleRemoteError(remoteError, setError),
+                            Promise.all([
+                                refreshFriends(),
+                                refreshStats(),
+                            ]).catch((remoteError) =>
+                                handleRemoteError(remoteError, setError),
                             );
                         }
 
@@ -260,10 +272,7 @@ function App() {
                             Promise.all([
                                 refreshSessions(),
                                 refreshStats(),
-                                shouldRefreshOpenSession(
-                                    payload,
-                                    openSessionId,
-                                )
+                                shouldRefreshOpenSession(payload, openSessionId)
                                     ? refreshSessionGames(openSessionId)
                                     : Promise.resolve(),
                             ]).catch((remoteError) =>
@@ -482,7 +491,10 @@ function App() {
 
                 return {
                     ...current,
-                    sessions: prependSessionOnce(current.sessions, savedSession),
+                    sessions: prependSessionOnce(
+                        current.sessions,
+                        savedSession,
+                    ),
                     totalSessions: alreadyExists
                         ? current.totalSessions
                         : current.totalSessions + 1,
@@ -566,7 +578,9 @@ function App() {
                     sessionMap.set(session.id, session);
                 });
 
-                const nextSessions = uniqueById(Array.from(sessionMap.values()));
+                const nextSessions = uniqueById(
+                    Array.from(sessionMap.values()),
+                );
                 sessionLimitRef.current = nextSessions.length;
 
                 return {
@@ -637,7 +651,9 @@ function App() {
                 refreshSessionGames(activeSession.id),
                 refreshSessions(),
                 refreshStats(),
-            ]).catch((loadError) => handleRemoteError(loadError, setModalError));
+            ]).catch((loadError) =>
+                handleRemoteError(loadError, setModalError),
+            );
         }
     }
 
@@ -663,7 +679,9 @@ function App() {
                     : Promise.resolve(),
                 refreshSessions(),
                 refreshStats(),
-            ]).catch((loadError) => handleRemoteError(loadError, setModalError));
+            ]).catch((loadError) =>
+                handleRemoteError(loadError, setModalError),
+            );
         }
     }
 

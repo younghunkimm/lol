@@ -276,13 +276,7 @@ export async function loadRemoteData() {
             .select("*")
             .order("created_at", { ascending: false }),
         loadSessionPage(client),
-        client
-            .from("friend_stats")
-            .select("*")
-            .order("win_rate", { ascending: false })
-            .order("wins", { ascending: false })
-            .order("losses", { ascending: false })
-            .order("name", { ascending: true }),
+        client.from("friend_stats").select("*"),
     ]);
 
     throwIfError("프로게이머 목록 불러오기", friendsResult.error);
@@ -317,11 +311,7 @@ export async function loadSessions(options) {
 export async function loadStats() {
     const { data, error } = await (await requireSession())
         .from("friend_stats")
-        .select("*")
-        .order("win_rate", { ascending: false })
-        .order("wins", { ascending: false })
-        .order("losses", { ascending: false })
-        .order("name", { ascending: true });
+        .select("*");
 
     throwIfError("통계 불러오기", error);
 
