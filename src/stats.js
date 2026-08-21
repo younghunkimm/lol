@@ -55,43 +55,53 @@ export function createLeaders(stats) {
         net: 0,
     };
 
-    const getLeader = (getScore) =>
-        stats.reduce(
-            (leader, row) => (getScore(row) > getScore(leader) ? row : leader),
-            emptyLeader,
-        );
+    const getLeaders = (getScore) => {
+        if (!stats.length) {
+            return [emptyLeader];
+        }
 
-    const winsLeader = getLeader((row) => row.wins);
-    const receivedLeader = getLeader((row) => row.received - row.paid);
-    const lossesLeader = getLeader((row) => row.losses);
-    const paidLeader = getLeader((row) => row.paid - row.received);
+        const bestScore = Math.max(...stats.map(getScore));
+        return stats.filter((row) => getScore(row) === bestScore);
+    };
+
+    const formatNames = (leaders) => leaders.map((leader) => leader.name);
+    const firstLeader = (leaders) => leaders[0] ?? emptyLeader;
+
+    const winsLeaders = getLeaders((row) => row.wins - row.losses);
+    const receivedLeaders = getLeaders((row) => row.received - row.paid);
+    const lossesLeaders = getLeaders((row) => row.losses - row.wins);
+    const paidLeaders = getLeaders((row) => row.paid - row.received);
+    const winsLeader = firstLeader(winsLeaders);
+    const receivedLeader = firstLeader(receivedLeaders);
+    const lossesLeader = firstLeader(lossesLeaders);
+    const paidLeader = firstLeader(paidLeaders);
 
     return [
         {
             label: "개고수",
-            mean: "최다 승자",
-            value: winsLeader.name,
-            metric: `${winsLeader.wins}승`,
+            mean: "최다 승리",
+            value: formatNames(winsLeaders),
+            metric: `${winsLeader.wins - winsLeader.losses}승`,
             positive: true,
         },
         {
             label: `외쳐 갓${getFirstName(receivedLeader.name)}`,
             mean: "최다 수령",
-            value: receivedLeader.name,
+            value: formatNames(receivedLeaders),
             metric: formatMoney(receivedLeader.net),
             positive: true,
         },
         {
             label: "병슨ㅋ",
-            mean: "최다 패자",
-            value: lossesLeader.name,
-            metric: `${lossesLeader.losses}패`,
+            mean: "최다 패배",
+            value: formatNames(lossesLeaders),
+            metric: `${lossesLeader.losses - lossesLeader.wins}패`,
             positive: false,
         },
         {
             label: "기부천사",
             mean: "최다 지불",
-            value: paidLeader.name,
+            value: formatNames(paidLeaders),
             metric: formatMoney(paidLeader.paid - paidLeader.received),
             positive: false,
         },

@@ -158,12 +158,13 @@ function App() {
 
     const refreshSessions = useCallback(async () => {
         const limit = Math.max(sessionLimitRef.current, SESSION_PAGE_SIZE);
-        const { sessions, hasMore } = await loadSessions({ limit });
+        const { sessions, hasMore, totalCount } = await loadSessions({ limit });
         sessionLimitRef.current = sessions.length;
         setData((current) => ({
             ...current,
             sessions,
             hasMoreSessions: hasMore,
+            totalSessions: totalCount,
         }));
     }, []);
 
@@ -448,7 +449,11 @@ function App() {
         };
 
         const saved = await commit(
-            { ...data, sessions: [session, ...data.sessions] },
+            {
+                ...data,
+                sessions: [session, ...data.sessions],
+                totalSessions: data.totalSessions + 1,
+            },
             () => insertSession(authToken, session),
         );
         if (saved) {
@@ -481,6 +486,7 @@ function App() {
                 (session) => session.id !== sessionId,
             ),
             games: data.games.filter((game) => game.sessionId !== sessionId),
+            totalSessions: Math.max(data.totalSessions - 1, 0),
         };
 
         const saved = await commit(nextData, () =>
@@ -505,7 +511,7 @@ function App() {
         setIsLoadingMoreSessions(true);
 
         try {
-            const { sessions, hasMore } = await loadSessions({
+            const { sessions, hasMore, totalCount } = await loadSessions({
                 offset: data.sessions.length,
             });
             setData((current) => {
@@ -523,6 +529,7 @@ function App() {
                     ...current,
                     sessions: nextSessions,
                     hasMoreSessions: hasMore,
+                    totalSessions: totalCount,
                 };
             });
         } catch (loadError) {
@@ -716,6 +723,7 @@ function App() {
                     <SessionList
                         sessions={data.sessions}
                         friends={data.friends}
+                        totalSessions={data.totalSessions}
                         hasMore={data.hasMoreSessions}
                         isLoadingMore={isLoadingMoreSessions}
                         onOpenSession={setActiveSessionId}

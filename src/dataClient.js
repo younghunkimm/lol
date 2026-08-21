@@ -196,18 +196,19 @@ async function addGameCounts(client, sessionRows) {
 async function loadSessionPage(client, { offset = 0, limit = SESSION_PAGE_SIZE } = {}) {
     const sessionsResult = await client
         .from("sessions")
-        .select("*")
+        .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
-        .range(offset, offset + limit);
+        .range(offset, offset + limit - 1);
 
     throwIfError("세션 목록 불러오기", sessionsResult.error);
 
     const rows = sessionsResult.data ?? [];
-    const pageRows = rows.slice(0, limit);
+    const totalCount = sessionsResult.count ?? rows.length;
 
     return {
-        sessions: await addGameCounts(client, pageRows),
-        hasMore: rows.length > limit,
+        sessions: await addGameCounts(client, rows),
+        hasMore: offset + rows.length < totalCount,
+        totalCount,
     };
 }
 
@@ -286,6 +287,7 @@ export async function loadRemoteData() {
         games: [],
         stats: (statsResult.data ?? []).map(fromStatsRow),
         hasMoreSessions: sessionsPage.hasMore,
+        totalSessions: sessionsPage.totalCount,
     };
 }
 

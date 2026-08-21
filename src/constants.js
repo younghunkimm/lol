@@ -13,4 +13,5 @@ export const emptyData = {
     games: [],
     stats: [],
     hasMoreSessions: false,
+    totalSessions: 0,
 };
