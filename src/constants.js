@@ -1,4 +1,5 @@
 export const DEFAULT_PRICE = 5000;
+export const SESSION_PAGE_SIZE = 5;
 export const AUTH_TOKEN_KEY = "lol-bet-dashboard-auth-token";
 export const AUTH_EXPIRES_AT_KEY = "lol-bet-dashboard-auth-expires-at";
 
@@ -10,4 +11,6 @@ export const emptyData = {
     friends: [],
     sessions: [],
     games: [],
+    stats: [],
+    hasMoreSessions: false,
 };

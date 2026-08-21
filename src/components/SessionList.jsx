@@ -3,10 +3,12 @@ import { Button, DangerButton, EmptyState, Panel } from "./ui";
 
 export function SessionList({
     sessions,
-    games,
     friends,
+    hasMore,
+    isLoadingMore,
     onOpenSession,
     onDeleteSession,
+    onLoadMore,
 }) {
     return (
         <Panel className="mb-4">
@@ -17,12 +19,7 @@ export function SessionList({
                 </span>
             </div>
             <div className="grid gap-3">
-                {sortByCreatedAt(sessions).map((session) => {
-                    const gameCount = games.filter(
-                        (game) => game.sessionId === session.id,
-                    ).length;
-
-                    return (
+                {sortByCreatedAt(sessions).map((session) => (
                         <article
                             className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-sm shadow-black/20 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center"
                             key={session.id}
@@ -44,7 +41,7 @@ export function SessionList({
                                     {formatMoney(session.price)} / 판
                                 </span>
                                 <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-black text-slate-300">
-                                    {gameCount}게임
+                                    {session.gameCount ?? 0}게임
                                 </span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 sm:flex">
@@ -62,11 +59,20 @@ export function SessionList({
                                 </DangerButton>
                             </div>
                         </article>
-                    );
-                })}
+                    ))}
                 {!sessions.length && (
                     <EmptyState>아직 생성된 세션이 없습니다.</EmptyState>
                 )}
+                {hasMore ? (
+                    <Button
+                        className="justify-self-center px-6"
+                        type="button"
+                        disabled={isLoadingMore}
+                        onClick={onLoadMore}
+                    >
+                        {isLoadingMore ? "불러오는 중" : "더보기"}
+                    </Button>
+                ) : null}
             </div>
         </Panel>
     );

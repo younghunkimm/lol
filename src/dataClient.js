@@ -1,4 +1,9 @@
-import { AUTH_EXPIRES_AT_KEY, AUTH_TOKEN_KEY, SUPABASE_URL } from "./constants";
+import {
+    AUTH_EXPIRES_AT_KEY,
+    AUTH_TOKEN_KEY,
+    SESSION_PAGE_SIZE,
+    SUPABASE_URL,
+} from "./constants";
 import { supabase } from "./supabaseClient";
 
 export function getAuthToken() {
@@ -117,6 +122,7 @@ function fromSessionRow(row) {
         price: row.price,
         friendIds: row.friend_ids ?? [],
         createdAt: row.created_at,
+        gameCount: Number(row.game_count) || 0,
     };
 }
 
@@ -138,6 +144,66 @@ function fromGameRow(row) {
         loserIds: row.loser_ids ?? [],
         note: row.note ?? "",
         createdAt: row.created_at,
+    };
+}
+
+function fromStatsRow(row) {
+    return {
+        id: row.id,
+        name: row.name,
+        wins: Number(row.wins) || 0,
+        losses: Number(row.losses) || 0,
+        paid: Number(row.paid) || 0,
+        received: Number(row.received) || 0,
+        net: Number(row.net) || 0,
+        winRate: Number(row.win_rate) || 0,
+    };
+}
+
+async function addGameCounts(client, sessionRows) {
+    const sessionIds = sessionRows.map((row) => row.id);
+
+    if (!sessionIds.length) {
+        return [];
+    }
+
+    const { data, error } = await client
+        .from("session_game_counts")
+        .select("*")
+        .in("session_id", sessionIds);
+
+    throwIfError("세션 게임 수 불러오기", error);
+
+    const gameCountMap = new Map(
+        (data ?? []).map((row) => [
+            row.session_id,
+            Number(row.game_count) || 0,
+        ]),
+    );
+
+    return sessionRows.map((row) =>
+        fromSessionRow({
+            ...row,
+            game_count: gameCountMap.get(row.id) ?? 0,
+        }),
+    );
+}
+
+async function loadSessionPage(client, { offset = 0, limit = SESSION_PAGE_SIZE } = {}) {
+    const sessionsResult = await client
+        .from("sessions")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit);
+
+    throwIfError("세션 목록 불러오기", sessionsResult.error);
+
+    const rows = sessionsResult.data ?? [];
+    const pageRows = rows.slice(0, limit);
+
+    return {
+        sessions: await addGameCounts(client, pageRows),
+        hasMore: rows.length > limit,
     };
 }
 
@@ -192,30 +258,64 @@ export async function loginWithPassword(password) {
 
 export async function loadRemoteData() {
     const client = await requireSession();
-    const [friendsResult, sessionsResult, gamesResult] = await Promise.all([
+    const [friendsResult, sessionsPage, statsResult] = await Promise.all([
         client
             .from("friends")
             .select("*")
             .order("created_at", { ascending: true }),
-        client
-            .from("sessions")
-            .select("*")
-            .order("created_at", { ascending: false }),
-        client
-            .from("games")
-            .select("*")
-            .order("created_at", { ascending: true }),
+        loadSessionPage(client),
+        client.from("friend_stats").select("*").order("name"),
     ]);
 
     throwIfError("프로게이머 목록 불러오기", friendsResult.error);
-    throwIfError("세션 목록 불러오기", sessionsResult.error);
-    throwIfError("게임 목록 불러오기", gamesResult.error);
+    throwIfError("통계 불러오기", statsResult.error);
 
     return {
         friends: (friendsResult.data ?? []).map(fromFriendRow),
-        sessions: (sessionsResult.data ?? []).map(fromSessionRow),
-        games: (gamesResult.data ?? []).map(fromGameRow),
+        sessions: sessionsPage.sessions,
+        games: [],
+        stats: (statsResult.data ?? []).map(fromStatsRow),
+        hasMoreSessions: sessionsPage.hasMore,
     };
+}
+
+export async function loadFriends() {
+    const { data, error } = await (await requireSession())
+        .from("friends")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+    throwIfError("프로게이머 목록 불러오기", error);
+
+    return (data ?? []).map(fromFriendRow);
+}
+
+export async function loadSessions(options) {
+    const client = await requireSession();
+    return loadSessionPage(client, options);
+}
+
+export async function loadStats() {
+    const { data, error } = await (await requireSession())
+        .from("friend_stats")
+        .select("*")
+        .order("name");
+
+    throwIfError("통계 불러오기", error);
+
+    return (data ?? []).map(fromStatsRow);
+}
+
+export async function loadSessionGames(sessionId) {
+    const { data, error } = await (await requireSession())
+        .from("games")
+        .select("*")
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: true });
+
+    throwIfError("세션 게임 목록 불러오기", error);
+
+    return (data ?? []).map(fromGameRow);
 }
 
 export async function insertFriend(_token, friend) {
@@ -267,4 +367,41 @@ export async function deleteGame(_token, gameId) {
         .eq("id", gameId);
 
     throwIfError("승패 기록 삭제", error);
+}
+
+export async function subscribeToRemoteChanges(onChange) {
+    const client = await requireSession();
+    const { data } = await client.auth.getSession();
+
+    if (data.session?.access_token) {
+        client.realtime.setAuth(data.session.access_token);
+    }
+
+    const topic =
+        typeof crypto !== "undefined" && crypto.randomUUID
+            ? `lol-dashboard-changes-${crypto.randomUUID()}`
+            : `lol-dashboard-changes-${Date.now()}-${Math.random()}`;
+
+    const channel = client
+        .channel(topic)
+        .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "friends" },
+            (payload) => onChange({ table: "friends", payload }),
+        )
+        .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "sessions" },
+            (payload) => onChange({ table: "sessions", payload }),
+        )
+        .on(
+            "postgres_changes",
+            { event: "*", schema: "public", table: "games" },
+            (payload) => onChange({ table: "games", payload }),
+        )
+        .subscribe();
+
+    return () => {
+        client.removeChannel(channel);
+    };
 }

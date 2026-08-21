@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { DEFAULT_PRICE, emptyData } from "./constants";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DEFAULT_PRICE, SESSION_PAGE_SIZE, emptyData } from "./constants";
 import { FriendManager } from "./components/FriendManager";
 import { LeaderSummary } from "./components/LeaderSummary";
 import { SessionComposer } from "./components/SessionComposer";
@@ -18,10 +18,15 @@ import {
     insertGame,
     insertSession,
     loginWithPassword,
+    loadFriends,
     loadRemoteData,
+    loadSessionGames,
+    loadSessions,
+    loadStats,
     setStoredAuthToken,
+    subscribeToRemoteChanges,
 } from "./dataClient";
-import { createLeaders, createSessionSettlements, createStats } from "./stats";
+import { createLeaders, createSessionSettlements } from "./stats";
 import {
     createId,
     formatSessionTitle,
@@ -29,6 +34,17 @@ import {
     nowIso,
     sortByCreatedAt,
 } from "./utils";
+
+function shouldRefreshOpenSession(payload, activeSessionId) {
+    if (!activeSessionId) {
+        return false;
+    }
+
+    return (
+        payload.new?.session_id === activeSessionId ||
+        payload.old?.session_id === activeSessionId
+    );
+}
 
 function App() {
     const [data, setData] = useState(emptyData);
@@ -40,6 +56,9 @@ function App() {
     const [error, setError] = useState(null);
     const [modalError, setModalError] = useState(null);
     const [activeSessionId, setActiveSessionId] = useState("");
+    const activeSessionIdRef = useRef("");
+    const sessionLimitRef = useRef(SESSION_PAGE_SIZE);
+    const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
     const [friendName, setFriendName] = useState("");
     const [sessionDraft, setSessionDraft] = useState({
         title: formatSessionTitle(),
@@ -52,7 +71,15 @@ function App() {
         note: "",
     });
 
+    const resetAuth = useCallback(() => {
+        clearAuthToken();
+        setAuthToken("");
+        setIsLoading(false);
+    }, []);
+
     useEffect(() => {
+        let ignore = false;
+
         async function loadData() {
             if (!authToken) {
                 setIsLoading(false);
@@ -60,8 +87,16 @@ function App() {
             }
 
             try {
-                setData(await loadRemoteData(authToken));
+                const nextData = await loadRemoteData(authToken);
+                if (!ignore) {
+                    sessionLimitRef.current = nextData.sessions.length;
+                    setData(nextData);
+                }
             } catch (loadError) {
+                if (ignore) {
+                    return;
+                }
+
                 if (loadError.status === 401) {
                     resetAuth();
                     return;
@@ -77,7 +112,158 @@ function App() {
         }
 
         loadData();
-    }, [authToken]);
+
+        return () => {
+            ignore = true;
+        };
+    }, [authToken, resetAuth]);
+
+    const handleRemoteError = useCallback(
+        (remoteError, errorHandler) => {
+            if (remoteError.status === 401) {
+                resetAuth();
+                return;
+            }
+
+            errorHandler({
+                message: remoteError.message,
+                id: Date.now(),
+            });
+        },
+        [resetAuth],
+    );
+
+    const refreshFriends = useCallback(async () => {
+        const friends = await loadFriends();
+        setData((current) => ({ ...current, friends }));
+    }, []);
+
+    const refreshSessions = useCallback(async () => {
+        const limit = Math.max(sessionLimitRef.current, SESSION_PAGE_SIZE);
+        const { sessions, hasMore } = await loadSessions({ limit });
+        sessionLimitRef.current = sessions.length;
+        setData((current) => ({
+            ...current,
+            sessions,
+            hasMoreSessions: hasMore,
+        }));
+    }, []);
+
+    const refreshStats = useCallback(async () => {
+        const stats = await loadStats();
+        setData((current) => ({ ...current, stats }));
+    }, []);
+
+    const refreshSessionGames = useCallback(async (sessionId) => {
+        const games = await loadSessionGames(sessionId);
+        setData((current) => ({ ...current, games }));
+    }, []);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadActiveSessionGames() {
+            if (!authToken || !activeSessionId) {
+                setData((current) => ({ ...current, games: [] }));
+                return;
+            }
+
+            try {
+                const games = await loadSessionGames(activeSessionId);
+                if (!ignore) {
+                    setData((current) => ({ ...current, games }));
+                }
+            } catch (loadError) {
+                if (!ignore) {
+                    handleRemoteError(loadError, setModalError);
+                }
+            }
+        }
+
+        loadActiveSessionGames();
+
+        return () => {
+            ignore = true;
+        };
+    }, [activeSessionId, authToken, handleRemoteError]);
+
+    useEffect(() => {
+        activeSessionIdRef.current = activeSessionId;
+    }, [activeSessionId]);
+
+    useEffect(() => {
+        if (!authToken) {
+            return undefined;
+        }
+
+        let unsubscribe = () => {};
+        let closed = false;
+
+        async function bindRealtime() {
+            try {
+                const nextUnsubscribe = await subscribeToRemoteChanges(
+                    ({ table, payload }) => {
+                        if (closed) {
+                            return;
+                        }
+
+                        if (table === "friends") {
+                            Promise.all([refreshFriends(), refreshStats()]).catch(
+                                (remoteError) =>
+                                    handleRemoteError(remoteError, setError),
+                            );
+                        }
+
+                        if (table === "sessions") {
+                            refreshSessions().catch((remoteError) =>
+                                handleRemoteError(remoteError, setError),
+                            );
+                        }
+
+                        if (table === "games") {
+                            const openSessionId = activeSessionIdRef.current;
+
+                            Promise.all([
+                                refreshSessions(),
+                                refreshStats(),
+                                shouldRefreshOpenSession(
+                                    payload,
+                                    openSessionId,
+                                )
+                                    ? refreshSessionGames(openSessionId)
+                                    : Promise.resolve(),
+                            ]).catch((remoteError) =>
+                                handleRemoteError(remoteError, setError),
+                            );
+                        }
+                    },
+                );
+
+                if (closed) {
+                    nextUnsubscribe();
+                    return;
+                }
+
+                unsubscribe = nextUnsubscribe;
+            } catch (remoteError) {
+                handleRemoteError(remoteError, setError);
+            }
+        }
+
+        bindRealtime();
+
+        return () => {
+            closed = true;
+            unsubscribe();
+        };
+    }, [
+        authToken,
+        handleRemoteError,
+        refreshFriends,
+        refreshSessionGames,
+        refreshSessions,
+        refreshStats,
+    ]);
 
     useEffect(() => {
         if (error?.message) {
@@ -113,14 +299,8 @@ function App() {
         session: activeSession,
     });
 
-    const stats = useMemo(() => createStats(data), [data]);
+    const stats = data.stats;
     const leaders = useMemo(() => createLeaders(stats), [stats]);
-
-    function resetAuth() {
-        clearAuthToken();
-        setAuthToken("");
-        setIsLoading(false);
-    }
 
     async function commit(nextData, action, errorHandler = setError) {
         errorHandler(null);
@@ -184,6 +364,9 @@ function App() {
         );
         if (saved) {
             setFriendName("");
+            Promise.all([refreshStats(), refreshFriends()]).catch((loadError) =>
+                handleRemoteError(loadError, setError),
+            );
         }
     }
 
@@ -200,7 +383,7 @@ function App() {
             return;
         }
 
-        await commit(
+        const saved = await commit(
             {
                 ...data,
                 friends: data.friends.filter(
@@ -209,6 +392,11 @@ function App() {
             },
             () => deleteRemoteFriend(authToken, friendId),
         );
+        if (saved) {
+            Promise.all([refreshStats(), refreshFriends()]).catch((loadError) =>
+                handleRemoteError(loadError, setError),
+            );
+        }
     }
 
     async function createSession(event) {
@@ -246,6 +434,9 @@ function App() {
                 friendIds: [],
             });
             setActiveSessionId(session.id);
+            Promise.all([refreshSessions(), refreshStats()]).catch(
+                (loadError) => handleRemoteError(loadError, setError),
+            );
         }
     }
 
@@ -274,6 +465,46 @@ function App() {
 
         if (saved && activeSessionId === sessionId) {
             closeModal();
+        }
+        if (saved) {
+            Promise.all([refreshSessions(), refreshStats()]).catch(
+                (loadError) => handleRemoteError(loadError, setError),
+            );
+        }
+    }
+
+    async function loadMoreSessions() {
+        if (isLoadingMoreSessions || !data.hasMoreSessions) {
+            return;
+        }
+
+        setIsLoadingMoreSessions(true);
+
+        try {
+            const { sessions, hasMore } = await loadSessions({
+                offset: data.sessions.length,
+            });
+            setData((current) => {
+                const sessionMap = new Map(
+                    current.sessions.map((session) => [session.id, session]),
+                );
+                sessions.forEach((session) => {
+                    sessionMap.set(session.id, session);
+                });
+
+                const nextSessions = Array.from(sessionMap.values());
+                sessionLimitRef.current = nextSessions.length;
+
+                return {
+                    ...current,
+                    sessions: nextSessions,
+                    hasMoreSessions: hasMore,
+                };
+            });
+        } catch (loadError) {
+            handleRemoteError(loadError, setError);
+        } finally {
+            setIsLoadingMoreSessions(false);
         }
     }
 
@@ -327,6 +558,11 @@ function App() {
         );
         if (saved) {
             setGameDraft({ winnerIds: [], loserIds: [], note: "" });
+            Promise.all([
+                refreshSessionGames(activeSession.id),
+                refreshSessions(),
+                refreshStats(),
+            ]).catch((loadError) => handleRemoteError(loadError, setModalError));
         }
     }
 
@@ -345,6 +581,13 @@ function App() {
             () => deleteRemoteGame(authToken, gameId),
             setModalError,
         );
+        Promise.all([
+            activeSessionId
+                ? refreshSessionGames(activeSessionId)
+                : Promise.resolve(),
+            refreshSessions(),
+            refreshStats(),
+        ]).catch((loadError) => handleRemoteError(loadError, setModalError));
     }
 
     function closeModal() {
@@ -446,10 +689,12 @@ function App() {
 
                     <SessionList
                         sessions={data.sessions}
-                        games={data.games}
                         friends={data.friends}
+                        hasMore={data.hasMoreSessions}
+                        isLoadingMore={isLoadingMoreSessions}
                         onOpenSession={setActiveSessionId}
                         onDeleteSession={deleteSession}
+                        onLoadMore={loadMoreSessions}
                     />
 
                     <StatsTable stats={stats} />
