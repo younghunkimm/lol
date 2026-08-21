@@ -20,9 +20,9 @@ export function StatsTable({ stats }) {
                             <th className="px-3 py-3">승</th>
                             <th className="px-3 py-3">패</th>
                             <th className="px-3 py-3">승률</th>
-                            <th className="px-3 py-3">손해</th>
-                            <th className="px-3 py-3">이득</th>
-                            <th className="px-3 py-3">손익</th>
+                            <th className="px-3 py-3 text-rose-300">손해</th>
+                            <th className="px-3 py-3 text-cyan-300">이득</th>
+                            <th className="px-3 py-3 text-violet-300">손익</th>
                         </tr>
                     </thead>
                     <tbody>
