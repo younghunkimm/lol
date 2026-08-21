@@ -6,7 +6,8 @@ import { SessionComposer } from "./components/SessionComposer";
 import { SessionList } from "./components/SessionList";
 import { SessionModal } from "./components/SessionModal";
 import { StatsTable } from "./components/StatsTable";
-import { Alert, Panel } from "./components/ui";
+import { Panel } from "./components/ui";
+import { confirmAction, showToast } from "./alerts";
 import {
     deleteFriend as deleteRemoteFriend,
     deleteGame as deleteRemoteGame,
@@ -30,8 +31,8 @@ import {
 function App() {
     const [data, setData] = useState(emptyData);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [modalError, setModalError] = useState("");
+    const [error, setError] = useState(null);
+    const [modalError, setModalError] = useState(null);
     const [activeSessionId, setActiveSessionId] = useState("");
     const [friendName, setFriendName] = useState("");
     const [sessionDraft, setSessionDraft] = useState({
@@ -56,7 +57,10 @@ function App() {
             try {
                 setData(await loadRemoteData());
             } catch (loadError) {
-                setError(`${loadError.message}. 로컬 저장소로 전환했습니다.`);
+                setError({
+                    message: `${loadError.message}. 로컬 저장소로 전환했습니다.`,
+                    id: Date.now(),
+                });
                 setData(getLocalData());
             } finally {
                 setIsLoading(false);
@@ -65,6 +69,18 @@ function App() {
 
         loadData();
     }, []);
+
+    useEffect(() => {
+        if (error?.message) {
+            showToast(error.message, "error");
+        }
+    }, [error]);
+
+    useEffect(() => {
+        if (modalError?.message) {
+            showToast(modalError.message, "error");
+        }
+    }, [modalError]);
 
     const activeSession = data.sessions.find(
         (session) => session.id === activeSessionId,
@@ -92,9 +108,9 @@ function App() {
     const leaders = useMemo(() => createLeaders(stats), [stats]);
 
     async function commit(nextData, action, errorHandler = setError) {
-        errorHandler("");
+        errorHandler(null);
 
-        if (!hasSupabase || error.includes("로컬 저장소")) {
+        if (!hasSupabase || error?.message?.includes("로컬 저장소")) {
             setData(nextData);
             setLocalData(nextData);
             return;
@@ -105,9 +121,10 @@ function App() {
             setData(nextData);
             setLocalData(nextData);
         } catch (actionError) {
-            errorHandler(
-                `${actionError.message}. 이번 변경은 로컬에 저장했습니다.`,
-            );
+            errorHandler({
+                message: `${actionError.message}. 이번 변경은 로컬에 저장했습니다.`,
+                id: Date.now(),
+            });
             setData(nextData);
             setLocalData(nextData);
         }
@@ -133,9 +150,11 @@ function App() {
             session.friendIds.includes(friendId),
         );
         if (isUsed) {
-            setError(
-                "이미 세션에 포함된 친구는 기록 보존을 위해 삭제할 수 없습니다.",
-            );
+            setError({
+                message:
+                    "이미 세션에 포함된 프로게이머는 기록 보존을 위해 삭제할 수 없습니다.",
+                id: Date.now(),
+            });
             return;
         }
 
@@ -159,7 +178,10 @@ function App() {
             sessionDraft.friendIds.length < 2 ||
             sessionDraft.friendIds.length > 5
         ) {
-            setError("세션에는 2명부터 5명까지 선택할 수 있습니다.");
+            setError({
+                message: "세션에는 2명부터 5명까지 선택할 수 있습니다.",
+                id: Date.now(),
+            });
             return;
         }
 
@@ -183,11 +205,13 @@ function App() {
     }
 
     async function deleteSession(sessionId) {
-        if (
-            !window.confirm(
-                "이 세션을 삭제할까요? 세션의 승패 기록도 함께 삭제됩니다.",
-            )
-        ) {
+        const confirmed = await confirmAction({
+            title: "세션을 삭제할까요?",
+            text: "세션의 승패 기록도 함께 삭제됩니다.",
+            confirmButtonText: "삭제",
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -214,12 +238,18 @@ function App() {
             !gameDraft.winnerIds.length ||
             !gameDraft.loserIds.length
         ) {
-            setModalError("승자와 패자를 각각 1명 이상 선택해 주세요.");
+            setModalError({
+                message: "승자와 패자를 각각 1명 이상 선택해 주세요.",
+                id: Date.now(),
+            });
             return;
         }
 
         if (gameDraft.winnerIds.length !== gameDraft.loserIds.length) {
-            setModalError("승자와 패자 수가 일치해야 합니다.");
+            setModalError({
+                message: "승자와 패자 수가 일치해야 합니다.",
+                id: Date.now(),
+            });
             return;
         }
 
@@ -227,9 +257,10 @@ function App() {
             gameDraft.loserIds.includes(friendId),
         );
         if (overlap) {
-            setModalError(
-                "같은 사람을 승자와 패자로 동시에 기록할 수 없습니다.",
-            );
+            setModalError({
+                message: "같은 사람을 승자와 패자로 동시에 기록할 수 없습니다.",
+                id: Date.now(),
+            });
             return;
         }
 
@@ -251,7 +282,12 @@ function App() {
     }
 
     async function deleteGame(gameId) {
-        if (!window.confirm("이 승패 기록을 삭제할까요?")) {
+        const confirmed = await confirmAction({
+            title: "승패 기록을 삭제할까요?",
+            confirmButtonText: "삭제",
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -264,7 +300,7 @@ function App() {
 
     function closeModal() {
         setActiveSessionId("");
-        setModalError("");
+        setModalError(null);
         setGameDraft({ winnerIds: [], loserIds: [], note: "" });
     }
 
@@ -304,8 +340,6 @@ function App() {
 
     return (
         <main className="mx-auto min-h-svh w-full max-w-7xl px-4 py-5 text-slate-100 sm:px-6 lg:px-8 lg:py-8">
-            <Alert>{error}</Alert>
-
             {isLoading ? (
                 <Panel className="grid min-h-56 place-items-center text-sm font-bold text-slate-400">
                     데이터를 불러오는 중입니다.
@@ -350,7 +384,6 @@ function App() {
                 games={sessionGames}
                 settlements={activeSessionSettlements}
                 gameDraft={gameDraft}
-                modalError={modalError}
                 onClose={closeModal}
                 onAddGame={addGame}
                 onDeleteGame={deleteGame}
@@ -362,6 +395,11 @@ function App() {
                 }
                 onGameDraftChange={setGameDraft}
             />
+
+            <footer className="mt-8 pb-2 text-center text-xs font-semibold text-slate-500">
+                작고 소중한 영훈이에게 커피 한잔<br></br>
+                카카오뱅크 3333-12-2105691
+            </footer>
         </main>
     );
 }

@@ -4,7 +4,7 @@ import {
     getName,
     getSignedMoneyClass,
 } from "../utils";
-import { Alert, Button, DangerButton, EmptyState, TextInput } from "./ui";
+import { Button, DangerButton, EmptyState, TextInput } from "./ui";
 
 function ParticipantToggleGroup({
     label,
@@ -70,6 +70,24 @@ function SettlementPanel({ rows }) {
     );
 }
 
+function PlayerNameList({ ids, friends, align = "left" }) {
+    return (
+        <strong
+            className={`mt-1 flex flex-wrap gap-x-1 gap-y-1 text-sm font-black ${
+                align === "right"
+                    ? "justify-end text-right text-rose-50"
+                    : "justify-start text-left text-cyan-50"
+            }`}
+        >
+            {ids.map((id, index) => (
+                <span className="break-all" key={id}>
+                    {getName(friends, id)}
+                </span>
+            ))}
+        </strong>
+    );
+}
+
 function GameRecordCard({ game, index, friends, onDeleteGame }) {
     return (
         <article
@@ -90,11 +108,7 @@ function GameRecordCard({ game, index, friends, onDeleteGame }) {
                     <span className="block text-xs font-black text-cyan-300">
                         승자
                     </span>
-                    <strong className="mt-1 block truncate text-sm font-black text-cyan-50">
-                        {game.winnerIds
-                            .map((id) => getName(friends, id))
-                            .join(", ")}
-                    </strong>
+                    <PlayerNameList ids={game.winnerIds} friends={friends} />
                 </div>
                 <span className="rounded-full bg-violet-400/15 px-3 py-1 text-xs font-black text-violet-100">
                     VS
@@ -103,11 +117,11 @@ function GameRecordCard({ game, index, friends, onDeleteGame }) {
                     <span className="block text-xs font-black text-rose-300">
                         패자
                     </span>
-                    <strong className="mt-1 block truncate text-sm font-black text-rose-50">
-                        {game.loserIds
-                            .map((id) => getName(friends, id))
-                            .join(", ")}
-                    </strong>
+                    <PlayerNameList
+                        ids={game.loserIds}
+                        friends={friends}
+                        align="right"
+                    />
                 </div>
             </div>
             {game.note && (
@@ -126,7 +140,6 @@ export function SessionModal({
     games,
     settlements,
     gameDraft,
-    modalError,
     onClose,
     onAddGame,
     onDeleteGame,
@@ -147,11 +160,15 @@ export function SessionModal({
             <section className="max-h-[calc(100svh-2rem)] w-full max-w-6xl overflow-auto rounded-3xl border border-white/10 bg-[#111722] p-4 shadow-2xl shadow-black/40 sm:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                        <h2 className="truncate text-2xl font-black tracking-tight text-slate-50">
+                        <h2 className="text-2xl font-black tracking-tight text-slate-50">
                             {activeSession.title}
                         </h2>
                     </div>
-                    <Button type="button" onClick={onClose}>
+                    <Button
+                        className="order-first self-end sm:order-none sm:self-auto"
+                        type="button"
+                        onClick={onClose}
+                    >
                         닫기
                     </Button>
                 </div>
@@ -164,8 +181,6 @@ export function SessionModal({
                         {participants.map((friend) => friend.name).join(", ")}
                     </span>
                 </div>
-
-                <Alert>{modalError}</Alert>
 
                 <div className="grid gap-3 lg:grid-cols-2">
                     <form

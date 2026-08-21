@@ -67,11 +67,15 @@ export function getGameSettlement(game, session) {
 }
 
 export function getName(friends, friendId) {
-    return friends.find((friend) => friend.id === friendId)?.name || "삭제된 친구";
+    return (
+        friends.find((friend) => friend.id === friendId)?.name || "프로게이머"
+    );
 }
 
 export function sortByCreatedAt(items) {
-    return [...items].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return [...items].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+    );
 }
 
 export function getWinRateClass(winRate) {

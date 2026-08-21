@@ -118,7 +118,7 @@ export async function loadRemoteData() {
             .order("created_at", { ascending: true }),
     ]);
 
-    throwIfError("친구 목록 불러오기", friendsResult.error);
+    throwIfError("프로게이머 목록 불러오기", friendsResult.error);
     throwIfError("세션 목록 불러오기", sessionsResult.error);
     throwIfError("게임 목록 불러오기", gamesResult.error);
 
@@ -133,7 +133,7 @@ export async function insertFriend(friend) {
     const { error } = await requireSupabase()
         .from("friends")
         .insert(toFriendRow(friend));
-    throwIfError("친구 저장", error);
+    throwIfError("프로게이머 저장", error);
 }
 
 export async function deleteFriend(friendId) {
@@ -141,7 +141,7 @@ export async function deleteFriend(friendId) {
         .from("friends")
         .delete()
         .eq("id", friendId);
-    throwIfError("친구 삭제", error);
+    throwIfError("프로게이머 삭제", error);
 }
 
 export async function insertSession(session) {
