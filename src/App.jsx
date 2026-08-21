@@ -47,6 +47,18 @@ function shouldRefreshOpenSession(payload, activeSessionId) {
     );
 }
 
+function uniqueById(items) {
+    return Array.from(new Map(items.map((item) => [item.id, item])).values());
+}
+
+function prependSessionOnce(sessions, session) {
+    if (sessions.some((item) => item.id === session.id)) {
+        return sessions;
+    }
+
+    return [session, ...sessions];
+}
+
 function sortStats(stats) {
     return [...stats].sort((a, b) => {
         if (b.winRate !== a.winRate) {
@@ -76,6 +88,8 @@ function App() {
     const [activeSessionId, setActiveSessionId] = useState("");
     const activeSessionIdRef = useRef("");
     const sessionLimitRef = useRef(SESSION_PAGE_SIZE);
+    const isCreatingSessionRef = useRef(false);
+    const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
     const [friendName, setFriendName] = useState("");
     const [sessionDraft, setSessionDraft] = useState({
@@ -159,10 +173,11 @@ function App() {
     const refreshSessions = useCallback(async () => {
         const limit = Math.max(sessionLimitRef.current, SESSION_PAGE_SIZE);
         const { sessions, hasMore, totalCount } = await loadSessions({ limit });
-        sessionLimitRef.current = sessions.length;
+        const nextSessions = uniqueById(sessions);
+        sessionLimitRef.current = nextSessions.length;
         setData((current) => ({
             ...current,
-            sessions,
+            sessions: nextSessions,
             hasMoreSessions: hasMore,
             totalSessions: totalCount,
         }));
@@ -426,6 +441,11 @@ function App() {
 
     async function createSession(event) {
         event.preventDefault();
+
+        if (isCreatingSessionRef.current) {
+            return;
+        }
+
         const title = sessionDraft.title.trim() || formatSessionTitle();
         const price = Math.max(Number(sessionDraft.price) || DEFAULT_PRICE, 0);
 
@@ -440,6 +460,9 @@ function App() {
             return;
         }
 
+        isCreatingSessionRef.current = true;
+        setIsCreatingSession(true);
+
         const session = {
             id: createId(),
             title,
@@ -448,24 +471,45 @@ function App() {
             createdAt: nowIso(),
         };
 
-        const saved = await commit(
-            {
-                ...data,
-                sessions: [session, ...data.sessions],
-                totalSessions: data.totalSessions + 1,
-            },
-            () => insertSession(authToken, session),
-        );
-        if (saved) {
+        setError(null);
+
+        try {
+            const savedSession = await insertSession(authToken, session);
+            setData((current) => {
+                const alreadyExists = current.sessions.some(
+                    (item) => item.id === savedSession.id,
+                );
+
+                return {
+                    ...current,
+                    sessions: prependSessionOnce(current.sessions, savedSession),
+                    totalSessions: alreadyExists
+                        ? current.totalSessions
+                        : current.totalSessions + 1,
+                };
+            });
             setSessionDraft({
                 title: formatSessionTitle(),
                 price: DEFAULT_PRICE,
                 friendIds: [],
             });
-            setActiveSessionId(session.id);
+            setActiveSessionId(savedSession.id);
             Promise.all([refreshSessions(), refreshStats()]).catch(
                 (loadError) => handleRemoteError(loadError, setError),
             );
+        } catch (actionError) {
+            if (actionError.status === 401) {
+                resetAuth();
+                return;
+            }
+
+            setError({
+                message: actionError.message,
+                id: Date.now(),
+            });
+        } finally {
+            isCreatingSessionRef.current = false;
+            setIsCreatingSession(false);
         }
     }
 
@@ -522,7 +566,7 @@ function App() {
                     sessionMap.set(session.id, session);
                 });
 
-                const nextSessions = Array.from(sessionMap.values());
+                const nextSessions = uniqueById(Array.from(sessionMap.values()));
                 sessionLimitRef.current = nextSessions.length;
 
                 return {
@@ -707,6 +751,7 @@ function App() {
                         <SessionComposer
                             friends={data.friends}
                             sessionDraft={sessionDraft}
+                            isSubmitting={isCreatingSession}
                             onDraftChange={setSessionDraft}
                             onSubmit={createSession}
                             onToggleFriend={toggleSessionFriend}

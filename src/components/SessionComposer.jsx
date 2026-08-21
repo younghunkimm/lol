@@ -3,6 +3,7 @@ import { Button, Panel, TextInput } from "./ui";
 export function SessionComposer({
     friends,
     sessionDraft,
+    isSubmitting,
     onDraftChange,
     onSubmit,
     onToggleFriend,
@@ -72,8 +73,12 @@ export function SessionComposer({
                         </p>
                     )}
                 </div>
-                <Button className="w-full" type="submit">
-                    세션 만들기
+                <Button
+                    className="w-full disabled:cursor-not-allowed disabled:opacity-60"
+                    type="submit"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? "생성 중" : "세션 만들기"}
                 </Button>
             </form>
         </Panel>

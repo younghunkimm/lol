@@ -389,11 +389,15 @@ export async function deleteFriend(_token, friendId) {
 }
 
 export async function insertSession(_token, session) {
-    const { error } = await (await requireSession())
+    const { data, error } = await (await requireSession())
         .from("sessions")
-        .insert(toSessionRow(session));
+        .insert(toSessionRow(session))
+        .select("*")
+        .single();
 
     throwIfError("세션 저장", error);
+
+    return fromSessionRow(data);
 }
 
 export async function deleteSession(_token, sessionId) {
