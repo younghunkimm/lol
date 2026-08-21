@@ -318,6 +318,37 @@ export async function loadSessionGames(sessionId) {
     return (data ?? []).map(fromGameRow);
 }
 
+export async function hasFriendRecords(friendId) {
+    const client = await requireSession();
+    const [sessionsResult, winsResult, lossesResult] = await Promise.all([
+        client
+            .from("sessions")
+            .select("id")
+            .contains("friend_ids", [friendId])
+            .limit(1),
+        client
+            .from("games")
+            .select("id")
+            .contains("winner_ids", [friendId])
+            .limit(1),
+        client
+            .from("games")
+            .select("id")
+            .contains("loser_ids", [friendId])
+            .limit(1),
+    ]);
+
+    throwIfError("프로게이머 사용 여부 확인", sessionsResult.error);
+    throwIfError("프로게이머 승리 기록 확인", winsResult.error);
+    throwIfError("프로게이머 패배 기록 확인", lossesResult.error);
+
+    return Boolean(
+        sessionsResult.data?.length ||
+            winsResult.data?.length ||
+            lossesResult.data?.length,
+    );
+}
+
 export async function insertFriend(_token, friend) {
     const { error } = await (await requireSession())
         .from("friends")

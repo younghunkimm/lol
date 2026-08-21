@@ -14,6 +14,7 @@ import {
     deleteGame as deleteRemoteGame,
     deleteSession as deleteRemoteSession,
     getAuthToken,
+    hasFriendRecords,
     insertFriend,
     insertGame,
     insertSession,
@@ -371,9 +372,15 @@ function App() {
     }
 
     async function removeFriend(friendId) {
-        const isUsed = data.sessions.some((session) =>
-            session.friendIds.includes(friendId),
-        );
+        let isUsed;
+
+        try {
+            isUsed = await hasFriendRecords(friendId);
+        } catch (loadError) {
+            handleRemoteError(loadError, setError);
+            return;
+        }
+
         if (isUsed) {
             setError({
                 message:
@@ -576,18 +583,20 @@ function App() {
             return;
         }
 
-        await commit(
+        const saved = await commit(
             { ...data, games: data.games.filter((game) => game.id !== gameId) },
             () => deleteRemoteGame(authToken, gameId),
             setModalError,
         );
-        Promise.all([
-            activeSessionId
-                ? refreshSessionGames(activeSessionId)
-                : Promise.resolve(),
-            refreshSessions(),
-            refreshStats(),
-        ]).catch((loadError) => handleRemoteError(loadError, setModalError));
+        if (saved) {
+            Promise.all([
+                activeSessionId
+                    ? refreshSessionGames(activeSessionId)
+                    : Promise.resolve(),
+                refreshSessions(),
+                refreshStats(),
+            ]).catch((loadError) => handleRemoteError(loadError, setModalError));
+        }
     }
 
     function closeModal() {
