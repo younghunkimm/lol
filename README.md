@@ -9,15 +9,26 @@ npm install
 npm run dev
 ```
 
-브라우저에서는 Supabase DB를 직접 호출하지 않습니다. 공통 비밀번호로 `auth` Edge Function에서 JWT를 발급받고, 이후 요청은 `friends` Edge Function을 통해 처리됩니다.
+공통 비밀번호는 `auth` Edge Function에서만 검증합니다. 인증에 성공하면 Edge Function이 Supabase Auth 세션을 발급하고, 이후 브라우저는 Supabase DB를 직접 호출합니다.
 
-프론트엔드 환경변수는 Edge Function 호출 주소를 만들기 위한 `VITE_SUPABASE_URL`만 필요합니다.
+프론트엔드에는 Supabase URL과 publishable key가 필요합니다. publishable key는 공개 키이며, 데이터 접근 권한은 Supabase Auth JWT와 RLS 정책이 제어합니다.
 
 ```bash
 VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
 ```
 
-`VITE_SUPABASE_PUBLISHABLE_KEY`는 브라우저에서 Supabase SDK를 사용하지 않으므로 필요하지 않습니다.
+`auth` Edge Function에는 다음 secrets가 필요합니다.
+
+```bash
+PASSWORD=사용자가 입력할 공통 비밀번호
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
+APP_AUTH_EMAIL=Supabase Auth에 생성한 앱 전용 사용자 이메일
+APP_AUTH_PASSWORD=앱 전용 사용자 비밀번호
+```
+
+`APP_AUTH_EMAIL`/`APP_AUTH_PASSWORD` 계정은 Supabase Auth에 미리 생성하고 이메일 확인이 완료되어 있어야 합니다. `SUPABASE_SERVICE_ROLE_KEY`는 이 구조에서 프론트엔드와 인증 Edge Function 모두에 필요하지 않습니다.
 
 ## 검증
 

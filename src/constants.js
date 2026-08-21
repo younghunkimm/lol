@@ -3,6 +3,8 @@ export const AUTH_TOKEN_KEY = "lol-bet-dashboard-auth-token";
 export const AUTH_EXPIRES_AT_KEY = "lol-bet-dashboard-auth-expires-at";
 
 export const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+export const SUPABASE_PUBLISHABLE_KEY = import.meta.env
+    .VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const emptyData = {
     friends: [],

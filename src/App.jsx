@@ -130,7 +130,6 @@ function App() {
             setData(nextData);
             return true;
         } catch (actionError) {
-            console.log(actionError);
             if (actionError.status === 401) {
                 resetAuth();
                 return false;
@@ -158,10 +157,10 @@ function App() {
 
         try {
             const authSession = await loginWithPassword(trimmedPassword);
-            setStoredAuthToken(authSession);
+            await setStoredAuthToken(authSession);
             setPassword("");
             setIsLoading(true);
-            setAuthToken(authSession.token);
+            setAuthToken(authSession.accessToken);
         } catch (loginError) {
             clearAuthToken();
             setAuthError(loginError.message);
