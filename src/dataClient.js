@@ -16,7 +16,11 @@ export function getAuthToken() {
     return token;
 }
 
-export async function setStoredAuthToken({ accessToken, refreshToken, expiresAt }) {
+export async function setStoredAuthToken({
+    accessToken,
+    refreshToken,
+    expiresAt,
+}) {
     requireSupabase();
 
     const { error } = await supabase.auth.setSession({
@@ -193,7 +197,10 @@ async function addGameCounts(client, sessionRows) {
     );
 }
 
-async function loadSessionPage(client, { offset = 0, limit = SESSION_PAGE_SIZE } = {}) {
+async function loadSessionPage(
+    client,
+    { offset = 0, limit = SESSION_PAGE_SIZE } = {},
+) {
     const sessionsResult = await client
         .from("sessions")
         .select("*", { count: "exact" })
@@ -267,7 +274,7 @@ export async function loadRemoteData() {
         client
             .from("friends")
             .select("*")
-            .order("created_at", { ascending: true }),
+            .order("created_at", { ascending: false }),
         loadSessionPage(client),
         client
             .from("friend_stats")
@@ -295,7 +302,7 @@ export async function loadFriends() {
     const { data, error } = await (await requireSession())
         .from("friends")
         .select("*")
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false });
 
     throwIfError("프로게이머 목록 불러오기", error);
 
@@ -359,8 +366,8 @@ export async function hasFriendRecords(friendId) {
 
     return Boolean(
         sessionsResult.data?.length ||
-            winsResult.data?.length ||
-            lossesResult.data?.length,
+        winsResult.data?.length ||
+        lossesResult.data?.length,
     );
 }
 
