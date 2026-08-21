@@ -9,6 +9,7 @@ import { Button, DangerButton, EmptyState, TextInput } from "./ui";
 
 function ParticipantToggleGroup({
     label,
+    type,
     participants,
     selectedIds,
     disabledIds,
@@ -17,7 +18,11 @@ function ParticipantToggleGroup({
 }) {
     return (
         <>
-            <p className="text-sm font-black text-slate-300">{label}</p>
+            <p
+                className={`text-sm font-black ${type == "winner" ? "text-cyan-400" : "text-rose-400"}`}
+            >
+                {label}
+            </p>
             <div className="flex flex-wrap gap-2">
                 {participants.map((friend) => {
                     const isActive = selectedIds.includes(friend.id);
@@ -228,6 +233,7 @@ export function SessionModal({
                         <h3 className="text-lg font-black">게임 승패 기록</h3>
                         <ParticipantToggleGroup
                             label="승자"
+                            type="winner"
                             participants={participants}
                             selectedIds={gameDraft.winnerIds}
                             disabledIds={gameDraft.loserIds}
@@ -236,6 +242,7 @@ export function SessionModal({
                         />
                         <ParticipantToggleGroup
                             label="패자"
+                            type="loser"
                             participants={participants}
                             selectedIds={gameDraft.loserIds}
                             disabledIds={gameDraft.winnerIds}
