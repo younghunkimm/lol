@@ -47,6 +47,23 @@ function shouldRefreshOpenSession(payload, activeSessionId) {
     );
 }
 
+function sortStats(stats) {
+    return [...stats].sort((a, b) => {
+        if (b.winRate !== a.winRate) {
+            return b.winRate - a.winRate;
+        }
+
+        const aTotalGames = a.totalGames ?? a.wins + a.losses;
+        const bTotalGames = b.totalGames ?? b.wins + b.losses;
+
+        if (bTotalGames !== aTotalGames) {
+            return bTotalGames - aTotalGames;
+        }
+
+        return a.name.localeCompare(b.name, "ko");
+    });
+}
+
 function App() {
     const [data, setData] = useState(emptyData);
     const [authToken, setAuthToken] = useState(() => getAuthToken());
@@ -300,7 +317,7 @@ function App() {
         session: activeSession,
     });
 
-    const stats = data.stats;
+    const stats = useMemo(() => sortStats(data.stats), [data.stats]);
     const leaders = useMemo(() => createLeaders(stats), [stats]);
 
     async function commit(nextData, action, errorHandler = setError) {

@@ -17,9 +17,9 @@ export function StatsTable({ stats }) {
                     <thead>
                         <tr className="border-b border-white/10 text-xs font-black text-slate-400">
                             <th className="px-3 py-3">프로게이머</th>
+                            <th className="px-3 py-3">승률</th>
                             <th className="px-3 py-3">승</th>
                             <th className="px-3 py-3">패</th>
-                            <th className="px-3 py-3">승률</th>
                             <th className="px-3 py-3 text-rose-300">손해</th>
                             <th className="px-3 py-3 text-cyan-300">이득</th>
                             <th className="px-3 py-3 text-violet-300">손익</th>
@@ -36,13 +36,13 @@ export function StatsTable({ stats }) {
                                 key={row.id}
                             >
                                 <td className="px-3 py-3">{row.name}</td>
-                                <td className="px-3 py-3">{row.wins}</td>
-                                <td className="px-3 py-3">{row.losses}</td>
                                 <td
                                     className={`px-3 py-3 font-black ${getWinRateClass(row.winRate)}`}
                                 >
                                     {row.winRate}%
                                 </td>
+                                <td className="px-3 py-3">{row.wins}</td>
+                                <td className="px-3 py-3">{row.losses}</td>
                                 <td className="px-3 py-3 font-black text-rose-300">
                                     {formatMoney(row.paid)}
                                 </td>

@@ -148,11 +148,15 @@ function fromGameRow(row) {
 }
 
 function fromStatsRow(row) {
+    const wins = Number(row.wins) || 0;
+    const losses = Number(row.losses) || 0;
+
     return {
         id: row.id,
         name: row.name,
-        wins: Number(row.wins) || 0,
-        losses: Number(row.losses) || 0,
+        wins,
+        losses,
+        totalGames: wins + losses,
         paid: Number(row.paid) || 0,
         received: Number(row.received) || 0,
         net: Number(row.net) || 0,
@@ -264,7 +268,13 @@ export async function loadRemoteData() {
             .select("*")
             .order("created_at", { ascending: true }),
         loadSessionPage(client),
-        client.from("friend_stats").select("*").order("name"),
+        client
+            .from("friend_stats")
+            .select("*")
+            .order("win_rate", { ascending: false })
+            .order("wins", { ascending: false })
+            .order("losses", { ascending: false })
+            .order("name", { ascending: true }),
     ]);
 
     throwIfError("프로게이머 목록 불러오기", friendsResult.error);
@@ -299,7 +309,10 @@ export async function loadStats() {
     const { data, error } = await (await requireSession())
         .from("friend_stats")
         .select("*")
-        .order("name");
+        .order("win_rate", { ascending: false })
+        .order("wins", { ascending: false })
+        .order("losses", { ascending: false })
+        .order("name", { ascending: true });
 
     throwIfError("통계 불러오기", error);
 
