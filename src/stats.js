@@ -1,4 +1,4 @@
-import { formatMoney, getGameSettlement } from "./utils";
+import { getGameSettlement } from "./utils";
 
 export function createStats({ friends, games, sessions }) {
     const rows = friends.map((friend) => ({
@@ -124,7 +124,8 @@ export function createLeaders(stats) {
         {
             label: "최다 승률",
             value: formatNames(winsLeaders),
-            metric: `${winsLeader.winRate}%`,
+            metricFormat: "rate",
+            metricValue: winsLeader.winRate,
             textColor: "text-sky-500",
             bgColor: "bg-sky-400/20",
             borderColor: "border-sky-400/10",
@@ -132,7 +133,8 @@ export function createLeaders(stats) {
         {
             label: `수금왕`,
             value: formatNames(receivedLeaders),
-            metric: `+${formatMoney(receivedLeader.net)}`,
+            metricFormat: "positiveMoney",
+            metricValue: receivedLeader.net,
             textColor: "text-emerald-500",
             bgColor: "bg-emerald-400/20",
             borderColor: "border-emerald-400/10",
@@ -140,7 +142,8 @@ export function createLeaders(stats) {
         {
             label: "최저 승률",
             value: formatNames(lossesLeaders),
-            metric: `${lossesLeader.winRate}%`,
+            metricFormat: "rate",
+            metricValue: lossesLeader.winRate,
             textColor: "text-purple-500",
             bgColor: "bg-purple-400/20",
             borderColor: "border-purple-400/10",
@@ -149,7 +152,8 @@ export function createLeaders(stats) {
             label: "기부천사",
             mean: "최다 지불",
             value: formatNames(paidLeaders),
-            metric: formatMoney(paidLeader.net),
+            metricFormat: "money",
+            metricValue: paidLeader.net,
             textColor: "text-amber-500",
             bgColor: "bg-amber-400/20",
             borderColor: "border-amber-400/10",

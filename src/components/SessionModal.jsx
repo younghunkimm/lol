@@ -1,11 +1,7 @@
 import { useEffect } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import {
-    formatMoney,
-    formatSignedMoney,
-    getName,
-    getSignedMoneyClass,
-} from "../utils";
+import { formatMoney, getName } from "../utils";
+import { AnimatedList } from "./motion";
+import { SettlementList } from "./SettlementList";
 import { Button, DangerButton, EmptyState, TextInput } from "./ui";
 
 function ParticipantToggleGroup({
@@ -52,34 +48,12 @@ function ParticipantToggleGroup({
     );
 }
 
-function SettlementPanel({ rows }) {
+function SettlementPanel({ rows, ready }) {
     return (
         <div className="grid content-start gap-3 rounded-2xl border border-white/10 bg-[#151a23] p-4">
             <h3 className="text-lg font-black">자동 정산</h3>
             <div className="grid gap-2">
-                {rows.map((row) => (
-                    <motion.div
-                        className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-white/5 bg-white/[0.04] px-3 py-2.5"
-                        key={row.id}
-                        layout
-                        transition={{ duration: 0.18 }}
-                    >
-                        <div className="min-w-0">
-                            <span className="block truncate text-sm font-extrabold text-slate-200">
-                                {row.name}
-                            </span>
-                            <span className="mt-0.5 block text-xs font-bold text-slate-400">
-                                <span className="text-cyan-300">{row.wins}승</span>{" "}
-                                <span className="text-rose-300">{row.losses}패</span>
-                            </span>
-                        </div>
-                        <strong
-                            className={`text-base font-black ${getSignedMoneyClass(row.net)}`}
-                        >
-                            {formatSignedMoney(row.net)}
-                        </strong>
-                    </motion.div>
-                ))}
+                <SettlementList ready={ready} rows={rows} />
             </div>
         </div>
     );
@@ -154,6 +128,7 @@ export function SessionModal({
     friends,
     games,
     settlements,
+    isGamesReady,
     gameDraft,
     onClose,
     onAddGame,
@@ -273,32 +248,29 @@ export function SessionModal({
                         </Button>
                     </form>
 
-                    <SettlementPanel rows={settlements} />
+                    <SettlementPanel
+                        rows={settlements}
+                        ready={isGamesReady}
+                    />
                 </div>
 
                 <div className="mt-4">
                     <h3 className="text-lg font-black">승패 기록</h3>
                     <div className="mt-3 grid gap-2">
-                        <AnimatePresence initial={false}>
-                            {games.map((game, index) => (
-                            <motion.div
-                                key={game.id}
-                                layout
-                                initial={{ opacity: 0, y: -12 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -12, scale: 0.98 }}
-                                transition={{ duration: 0.2 }}
-                            >
+                        <AnimatedList
+                            getKey={(game) => game.id}
+                            items={games}
+                            ready={isGamesReady}
+                            renderItem={(game, index) => (
                                 <GameRecordCard
-                                game={game}
-                                gameNumber={games.length - index}
+                                    game={game}
+                                    gameNumber={games.length - index}
                                 index={index}
-                                friends={friends}
-                                onDeleteGame={onDeleteGame}
+                                    friends={friends}
+                                    onDeleteGame={onDeleteGame}
                                 />
-                            </motion.div>
-                            ))}
-                        </AnimatePresence>
+                            )}
+                        />
                         {!games.length && (
                             <EmptyState>승패 기록이 없습니다.</EmptyState>
                         )}

@@ -96,6 +96,7 @@ function App() {
     const [error, setError] = useState(null);
     const [modalError, setModalError] = useState(null);
     const [activeSessionId, setActiveSessionId] = useState("");
+    const [isSessionGamesLoading, setIsSessionGamesLoading] = useState(false);
     const activeSessionIdRef = useRef("");
     const authTokenRef = useRef(authToken);
     const sessionLimitRef = useRef(SESSION_PAGE_SIZE);
@@ -259,6 +260,7 @@ function App() {
         async function loadActiveSessionGames() {
             if (!authToken || !activeSessionId) {
                 setData((current) => ({ ...current, games: [] }));
+                setIsSessionGamesLoading(false);
                 return;
             }
 
@@ -270,6 +272,10 @@ function App() {
             } catch (loadError) {
                 if (!ignore) {
                     handleRemoteError(loadError, setModalError, authToken);
+                }
+            } finally {
+                if (!ignore) {
+                    setIsSessionGamesLoading(false);
                 }
             }
         }
@@ -821,8 +827,14 @@ function App() {
 
     function closeModal() {
         setActiveSessionId("");
+        setIsSessionGamesLoading(false);
         setModalError(null);
         setGameDraft({ winnerIds: [], loserIds: [], note: "" });
+    }
+
+    function openSession(sessionId) {
+        setIsSessionGamesLoading(true);
+        setActiveSessionId(sessionId);
     }
 
     function toggleSessionFriend(friendId) {
@@ -923,7 +935,7 @@ function App() {
                         totalSessions={data.totalSessions}
                         hasMore={data.hasMoreSessions}
                         isLoadingMore={isLoadingMoreSessions}
-                        onOpenSession={setActiveSessionId}
+                        onOpenSession={openSession}
                         onDeleteSession={deleteSession}
                         onLoadMore={loadMoreSessions}
                     />
@@ -938,6 +950,7 @@ function App() {
                 friends={data.friends}
                 games={sessionGames}
                 settlements={activeSessionSettlements}
+                isGamesReady={!isSessionGamesLoading}
                 gameDraft={gameDraft}
                 onClose={closeModal}
                 onAddGame={addGame}

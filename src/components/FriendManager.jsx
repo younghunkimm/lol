@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatedList } from "./motion";
 import { Button, DangerButton, Panel, TextInput } from "./ui";
 
 export function FriendManager({
@@ -33,17 +33,12 @@ export function FriendManager({
                 </Button>
             </form>
             <div className="grid gap-1.5 overflow-y-auto pr-1 flex-[1_0_0] min-h-50">
-                <AnimatePresence initial={false}>
-                    {friends.map((friend) => (
-                        <motion.div
-                            className="flex items-center justify-between gap-2 rounded-xl bg-white/[0.04] px-3 py-2"
-                            key={friend.id}
-                            layout
-                            initial={{ opacity: 0, y: -8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                            transition={{ duration: 0.18 }}
-                        >
+                <AnimatedList
+                    className="flex items-center justify-between gap-2 rounded-xl bg-white/[0.04] px-3 py-2"
+                    getKey={(friend) => friend.id}
+                    items={friends}
+                    renderItem={(friend) => (
+                        <>
                             <span className="truncate text-sm font-extrabold text-slate-200">
                                 {friend.name}
                             </span>
@@ -54,9 +49,9 @@ export function FriendManager({
                             >
                                 삭제
                             </DangerButton>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
+                        </>
+                    )}
+                />
             </div>
         </Panel>
     );

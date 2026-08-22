@@ -1,4 +1,5 @@
 import { formatMoney, getNetClass, getWinRateClass } from "../utils";
+import { AnimatedList, AnimatedNumber } from "./motion";
 import { EmptyState, Panel } from "./ui";
 
 export function StatsTable({ stats }) {
@@ -26,36 +27,63 @@ export function StatsTable({ stats }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {stats.map((row, index) => (
-                            <tr
-                                className={`border-b border-white/5 text-sm font-bold text-slate-300 ${
+                        <AnimatedList
+                            as="tr"
+                            className={(_, index) =>
+                                `border-b border-white/5 text-sm font-bold text-slate-300 ${
                                     index % 2 === 0
                                         ? "bg-[#151a23]"
                                         : "bg-white/[0.03]"
-                                }`}
-                                key={row.id}
-                            >
+                                }`
+                            }
+                            getKey={(row) => row.id}
+                            items={stats}
+                            renderItem={(row) => (
+                                <>
                                 <td className="px-3 py-3">{row.name}</td>
                                 <td
                                     className={`px-3 py-3 font-black ${getNetClass(row.net)}`}
                                 >
-                                    {formatMoney(row.net)}
+                                    <AnimatedNumber
+                                        format={formatMoney}
+                                        value={row.net}
+                                    />
                                 </td>
                                 <td
                                     className={`px-3 py-3 font-black ${getWinRateClass(row.winRate)}`}
                                 >
-                                    {row.winRate}%
-                                </td>
-                                <td className="px-3 py-3">{row.wins}</td>
-                                <td className="px-3 py-3">{row.losses}</td>
-                                <td className="px-3 py-3">
-                                    {formatMoney(row.paid)}
+                                    <AnimatedNumber
+                                        format={(value) => `${value}%`}
+                                        value={row.winRate}
+                                    />
                                 </td>
                                 <td className="px-3 py-3">
-                                    {formatMoney(row.received)}
+                                    <AnimatedNumber
+                                        format={String}
+                                        value={row.wins}
+                                    />
                                 </td>
-                            </tr>
-                        ))}
+                                <td className="px-3 py-3">
+                                    <AnimatedNumber
+                                        format={String}
+                                        value={row.losses}
+                                    />
+                                </td>
+                                <td className="px-3 py-3">
+                                    <AnimatedNumber
+                                        format={formatMoney}
+                                        value={row.paid}
+                                    />
+                                </td>
+                                <td className="px-3 py-3">
+                                    <AnimatedNumber
+                                        format={formatMoney}
+                                        value={row.received}
+                                    />
+                                </td>
+                                </>
+                            )}
+                        />
                     </tbody>
                 </table>
                 {!stats.length && (
