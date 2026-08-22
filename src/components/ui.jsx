@@ -1,4 +1,5 @@
-export const panelClass = "rounded-2xl border border-white/10 bg-[#151a23] p-4 shadow-sm shadow-black/20 md:p-5";
+export const panelClass =
+    "rounded-2xl border border-white/10 bg-[#151a23] p-4 shadow-sm shadow-black/20 md:p-5";
 export const inputClass =
     "w-full rounded-xl border border-white/10 bg-[#0f141d] px-3.5 py-2.5 text-sm font-semibold text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-400/10";
 export const buttonClass =
@@ -28,7 +29,11 @@ export function TextInput({ className = "", ...props }) {
 }
 
 export function Panel({ className = "", children }) {
-    return <section className={`${panelClass} ${className}`.trim()}>{children}</section>;
+    return (
+        <section className={`${panelClass} ${className}`.trim()}>
+            {children}
+        </section>
+    );
 }
 
 export function Alert({ children }) {
@@ -47,6 +52,9 @@ export function Alert({ children }) {
 }
 
 export function EmptyState({ children }) {
-    return <p className="rounded-2xl bg-white/[0.04] p-5 text-center text-sm font-bold text-slate-400">{children}</p>;
+    return (
+        <p className="rounded-2xl bg-white/[0.04] p-5 text-center text-sm font-bold text-slate-400">
+            {children}
+        </p>
+    );
 }
-

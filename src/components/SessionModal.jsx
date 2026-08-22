@@ -3,6 +3,7 @@ import { formatMoney, getName } from "../utils";
 import { AnimatedList } from "./motion";
 import { SettlementList } from "./SettlementList";
 import { Button, DangerButton, EmptyState, TextInput } from "./ui";
+import { SessionLockControl } from "./SessionLockControl";
 
 function ParticipantToggleGroup({
     label,
@@ -77,7 +78,14 @@ function PlayerNameList({ ids, friends, align = "left" }) {
     );
 }
 
-function GameRecordCard({ game, gameNumber, index, friends, onDeleteGame }) {
+function GameRecordCard({
+    game,
+    gameNumber,
+    index,
+    friends,
+    isLocked,
+    onDeleteGame,
+}) {
     return (
         <article
             className={`rounded-2xl border bg-[#151a23] p-4 ${index === 0 ? "border-cyan-400/60" : "border-white/10"}`}
@@ -94,13 +102,15 @@ function GameRecordCard({ game, gameNumber, index, friends, onDeleteGame }) {
                     <span className="rounded-full bg-violet-400/15 px-3 py-1 text-xs font-black text-violet-100">
                         {gameNumber}경기
                     </span>
-                    <DangerButton
-                        className="rounded-lg px-2.5 py-1.5 text-xs"
-                        type="button"
-                        onClick={() => onDeleteGame(game.id)}
-                    >
-                        삭제
-                    </DangerButton>
+                    {!isLocked ? (
+                        <DangerButton
+                            className="rounded-lg px-2.5 py-1.5 text-xs"
+                            type="button"
+                            onClick={() => onDeleteGame(game.id)}
+                        >
+                            삭제
+                        </DangerButton>
+                    ) : null}
                 </div>
                 <div className="min-w-0 rounded-xl border border-rose-400/10 bg-rose-400/10 px-3 py-3 text-right">
                     <span className="block text-xs font-black text-rose-300">
@@ -130,9 +140,12 @@ export function SessionModal({
     settlements,
     isGamesReady,
     gameDraft,
+    isLockUpdating,
     onClose,
     onAddGame,
+    onDeleteSession,
     onDeleteGame,
+    onToggleLock,
     onToggleWinner,
     onToggleLoser,
     onGameDraftChange,
@@ -185,19 +198,32 @@ export function SessionModal({
             aria-modal="true"
         >
             <section className="max-h-[calc(100svh-2rem)] w-full max-w-6xl overflow-auto rounded-3xl border border-white/10 bg-[#111722] p-4 shadow-2xl shadow-black/40 sm:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                        <h2 className="text-2xl font-black tracking-tight text-slate-50">
-                            {activeSession.title}
-                        </h2>
+                <div className="flex items-start justify-between gap-3">
+                    {!activeSession.isLocked ? (
+                        <DangerButton
+                            type="button"
+                            onClick={() => onDeleteSession(activeSession.id)}
+                        >
+                            삭제
+                        </DangerButton>
+                    ) : (
+                        <span />
+                    )}
+                    <div className="flex flex-shrink-0 gap-2">
+                        <SessionLockControl
+                            isLocked={activeSession.isLocked}
+                            isUpdating={isLockUpdating}
+                            onToggle={() => onToggleLock(activeSession.id)}
+                        />
+                        <Button type="button" onClick={onClose}>
+                            닫기
+                        </Button>
                     </div>
-                    <Button
-                        className="order-first self-end sm:order-none sm:self-auto"
-                        type="button"
-                        onClick={onClose}
-                    >
-                        닫기
-                    </Button>
+                </div>
+                <div className="mt-3 min-w-0">
+                    <h2 className="text-2xl font-black tracking-tight text-slate-50">
+                        {activeSession.title}
+                    </h2>
                 </div>
 
                 <div className="my-4 flex flex-wrap gap-2">
@@ -267,6 +293,7 @@ export function SessionModal({
                                     gameNumber={games.length - index}
                                 index={index}
                                     friends={friends}
+                                    isLocked={activeSession.isLocked}
                                     onDeleteGame={onDeleteGame}
                                 />
                             )}

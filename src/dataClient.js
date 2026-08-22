@@ -141,6 +141,7 @@ function fromSessionRow(row) {
         price: row.price,
         friendIds: row.friend_ids ?? [],
         createdAt: row.created_at,
+        isLocked: row.is_locked ?? true,
         gameCount: Number(row.game_count) || 0,
     };
 }
@@ -430,6 +431,19 @@ export async function deleteSession(_token, sessionId) {
         .eq("id", sessionId);
 
     throwIfError("세션 삭제", error);
+}
+
+export async function updateSessionLock(_token, sessionId, isLocked) {
+    const { data, error } = await (await requireSession())
+        .from("sessions")
+        .update({ is_locked: isLocked })
+        .eq("id", sessionId)
+        .select("*")
+        .single();
+
+    throwIfError("세션 잠금 상태 변경", error);
+
+    return fromSessionRow(data);
 }
 
 export async function insertGame(_token, game) {

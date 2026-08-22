@@ -1,6 +1,7 @@
 import { AnimatedList } from "./motion";
 import { formatMoney, getName, sortByCreatedAt } from "../utils";
-import { Button, DangerButton, EmptyState, Panel } from "./ui";
+import { Button, EmptyState, Panel } from "./ui";
+import { SessionLockControl } from "./SessionLockControl";
 
 export function SessionList({
     sessions,
@@ -9,7 +10,6 @@ export function SessionList({
     hasMore,
     isLoadingMore,
     onOpenSession,
-    onDeleteSession,
     onLoadMore,
 }) {
     return (
@@ -55,12 +55,10 @@ export function SessionList({
                             >
                                 상세보기
                             </Button>
-                            <DangerButton
-                                type="button"
-                                onClick={() => onDeleteSession(session.id)}
-                            >
-                                삭제
-                            </DangerButton>
+                            <SessionLockControl
+                                className="w-[60px] px-4 py-2.5"
+                                isLocked={session.isLocked}
+                            />
                         </div>
                         </>
                     )}

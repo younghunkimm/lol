@@ -26,6 +26,7 @@ import {
     loadStats,
     setStoredAuthToken,
     subscribeToRemoteChanges,
+    updateSessionLock as updateRemoteSessionLock,
 } from "./dataClient";
 import { createLeaders, createSessionSettlements } from "./stats";
 import {
@@ -104,6 +105,7 @@ function App() {
     const hasShownAuthResetToastRef = useRef(false);
     const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
+    const [isSessionLockUpdating, setIsSessionLockUpdating] = useState(false);
     const [friendName, setFriendName] = useState("");
     const [sessionDraft, setSessionDraft] = useState({
         title: formatSessionTitle(),
@@ -707,6 +709,42 @@ function App() {
         }
     }
 
+    async function updateSessionLock(sessionId) {
+        if (isSessionLockUpdating) {
+            return;
+        }
+
+        const session = data.sessions.find((item) => item.id === sessionId);
+
+        if (!session) {
+            return;
+        }
+
+        const isLocked = !session.isLocked;
+        setIsSessionLockUpdating(true);
+
+        try {
+            const saved = await commit(
+                {
+                    ...data,
+                    sessions: data.sessions.map((item) =>
+                        item.id === sessionId ? { ...item, isLocked } : item,
+                    ),
+                },
+                () => updateRemoteSessionLock(authToken, sessionId, isLocked),
+                setModalError,
+            );
+
+            if (saved) {
+                refreshSessions().catch((loadError) =>
+                    handleRemoteError(loadError, setModalError, authToken),
+                );
+            }
+        } finally {
+            setIsSessionLockUpdating(false);
+        }
+    }
+
     async function loadMoreSessions() {
         if (isLoadingMoreSessions || !data.hasMoreSessions) {
             return;
@@ -836,6 +874,7 @@ function App() {
     function closeModal() {
         setActiveSessionId("");
         setIsSessionGamesLoading(false);
+        setIsSessionLockUpdating(false);
         setModalError(null);
         setGameDraft({ winnerIds: [], loserIds: [], note: "" });
     }
@@ -944,7 +983,6 @@ function App() {
                         hasMore={data.hasMoreSessions}
                         isLoadingMore={isLoadingMoreSessions}
                         onOpenSession={openSession}
-                        onDeleteSession={deleteSession}
                         onLoadMore={loadMoreSessions}
                     />
 
@@ -960,9 +998,12 @@ function App() {
                 settlements={activeSessionSettlements}
                 isGamesReady={!isSessionGamesLoading}
                 gameDraft={gameDraft}
+                isLockUpdating={isSessionLockUpdating}
                 onClose={closeModal}
                 onAddGame={addGame}
+                onDeleteSession={deleteSession}
                 onDeleteGame={deleteGame}
+                onToggleLock={updateSessionLock}
                 onToggleWinner={(friendId) =>
                     toggleGameFriend("winnerIds", friendId)
                 }
