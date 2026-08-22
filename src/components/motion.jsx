@@ -31,7 +31,7 @@ export function AnimatedList({
     }, [ready, reducedMotion]);
 
     return (
-        <AnimatePresence initial={false} mode="popLayout">
+        <AnimatePresence initial={false}>
             {items.map((item, index) => (
                 <MotionItem
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -42,7 +42,7 @@ export function AnimatedList({
                     }
                     exit={
                         canAnimate
-                            ? { opacity: 0, y: -16, scale: 0.96 }
+                            ? { opacity: 0, scale: 0.96 }
                             : undefined
                     }
                     initial={
