@@ -31,7 +31,7 @@ export function SessionComposer({
                     />
                 </label>
                 <label className="grid gap-1.5 text-sm font-extrabold text-slate-300">
-                    판당 가격
+                    판당 금액
                     <TextInput
                         type="number"
                         min="0"

@@ -9,15 +9,17 @@ export function nowIso() {
 }
 
 export function formatSessionTitle(date = new Date()) {
+    const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
+    const weekday = weekdays[date.getDay()];
     const period = date.getHours() < 12 ? "오전" : "오후";
     const displayHour = date.getHours() % 12 || 12;
     const hour = String(displayHour).padStart(2, "0");
     const minute = String(date.getMinutes()).padStart(2, "0");
 
-    return `${year}. ${month}. ${day}. ${period} ${hour}:${minute}`;
+    return `${year}. ${month}. ${day}. (${weekday}) ${period} ${hour}:${minute}`;
 }
 
 export function formatMoney(amount) {
