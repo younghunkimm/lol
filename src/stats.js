@@ -45,7 +45,6 @@ export function createStats({ friends, games, sessions }) {
 }
 
 export function createLeaders(stats) {
-    const getFirstName = (name) => (name.length > 1 ? name.slice(1) : name);
     const emptyLeader = {
         name: "-",
         wins: 0,
@@ -56,64 +55,26 @@ export function createLeaders(stats) {
         winRate: 0,
     };
 
-    const getLeaders = (getScore, rows = stats) => {
-        if (!rows.length) {
+    const playedStats = stats.filter((row) => row.wins + row.losses > 0);
+    const hasPlayedGames = playedStats.length > 0;
+
+    const getLeaders = (getScore) => {
+        if (!hasPlayedGames) {
             return [emptyLeader];
         }
 
-        const bestScore = Math.max(...rows.map(getScore));
-        return rows.filter((row) => getScore(row) === bestScore);
-    };
-
-    const getWinLeaders = (rows) => {
-        if (!rows.length) {
-            return [emptyLeader];
-        }
-
-        const highestWinRate = Math.max(...rows.map((row) => row.winRate));
-        const highestWinRateRows = rows.filter(
-            (row) => row.winRate === highestWinRate,
-        );
-        const maxWins = Math.max(
-            ...highestWinRateRows.map((row) => row.wins - row.losses),
-        );
-
-        return highestWinRateRows.filter(
-            (row) => row.wins - row.losses === maxWins,
-        );
-    };
-
-    const getLossLeaders = (rows) => {
-        if (!rows.length) {
-            return [emptyLeader];
-        }
-
-        const lowestWinRate = Math.min(...rows.map((row) => row.winRate));
-        const lowestWinRateRows = rows.filter(
-            (row) => row.winRate === lowestWinRate,
-        );
-        const maxLosses = Math.max(
-            ...lowestWinRateRows.map((row) => row.losses - row.wins),
-        );
-
-        return lowestWinRateRows.filter(
-            (row) => row.losses - row.wins === maxLosses,
-        );
+        const bestScore = Math.max(...playedStats.map(getScore));
+        return playedStats.filter((row) => getScore(row) === bestScore);
     };
 
     const formatNames = (leaders) => leaders.map((leader) => leader.name);
     const firstLeader = (leaders) => leaders[0] ?? emptyLeader;
 
-    const playedStats = stats.filter((row) => row.wins + row.losses > 0);
-    const hasPlayedGames = playedStats.length > 0;
-    const winsLeaders = getWinLeaders(playedStats);
-    const receivedLeaders = hasPlayedGames
-        ? getLeaders((row) => row.received - row.paid)
-        : [emptyLeader];
-    const lossesLeaders = getLossLeaders(playedStats);
-    const paidLeaders = hasPlayedGames
-        ? getLeaders((row) => row.paid - row.received)
-        : [emptyLeader];
+    const winsLeaders = getLeaders((row) => row.wins);
+    const receivedLeaders = getLeaders((row) => row.received - row.paid);
+    const lossesLeaders = getLeaders((row) => row.losses);
+    const paidLeaders = getLeaders((row) => row.paid - row.received);
+
     const winsLeader = firstLeader(winsLeaders);
     const receivedLeader = firstLeader(receivedLeaders);
     const lossesLeader = firstLeader(lossesLeaders);
@@ -121,32 +82,37 @@ export function createLeaders(stats) {
 
     return [
         {
-            label: "개고수",
-            mean: "최다 승리",
+            label: "최다 승리",
             value: formatNames(winsLeaders),
-            metric: `${winsLeader.winRate}%`,
-            positive: true,
+            metric: `${winsLeader.wins}승`,
+            textColor: "text-sky-500",
+            bgColor: "bg-sky-400/20",
+            borderColor: "border-sky-400/10",
         },
         {
-            label: `외쳐 갓${getFirstName(receivedLeader.name)}`,
-            mean: "최다 수령",
+            label: `수금왕`,
             value: formatNames(receivedLeaders),
-            metric: formatMoney(receivedLeader.net),
-            positive: true,
+            metric: `+${formatMoney(receivedLeader.net)}`,
+            textColor: "text-emerald-500",
+            bgColor: "bg-emerald-400/20",
+            borderColor: "border-emerald-400/10",
         },
         {
-            label: "병슨ㅋ",
-            mean: "최다 패배",
+            label: "최다 패배",
             value: formatNames(lossesLeaders),
-            metric: `${lossesLeader.winRate}%`,
-            positive: false,
+            metric: `${lossesLeader.losses}패`,
+            textColor: "text-purple-500",
+            bgColor: "bg-purple-400/20",
+            borderColor: "border-purple-400/10",
         },
         {
             label: "기부천사",
             mean: "최다 지불",
             value: formatNames(paidLeaders),
-            metric: formatMoney(paidLeader.paid - paidLeader.received),
-            positive: false,
+            metric: formatMoney(paidLeader.net),
+            textColor: "text-amber-500",
+            bgColor: "bg-amber-400/20",
+            borderColor: "border-amber-400/10",
         },
     ];
 }

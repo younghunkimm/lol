@@ -6,15 +6,11 @@ export function LeaderSummary({ leaders }) {
 
                 return (
                     <article
-                        className={`flex flex-col justify-between items-start gap-2 rounded-2xl border p-3 shadow-sm shadow-black/20 sm:p-4 ${
-                            isPositive
-                                ? "border-cyan-400/20 bg-cyan-400/10"
-                                : "border-amber-400/20 bg-amber-400/10"
-                        }`}
+                        className={`flex flex-col justify-between items-start gap-2 rounded-2xl border p-3 shadow-sm shadow-black/20 sm:p-4 ${leader.borderColor} ${leader.bgColor}`}
                         key={leader.label}
                     >
                         <span
-                            className={`block text-[11px] font-extrabold sm:text-xs ${isPositive ? "text-cyan-300" : "text-amber-300"}`}
+                            className={`block text-[11px] font-extrabold sm:text-xs ${leader.textColor}`}
                         >
                             {leader.label}
                         </span>
@@ -31,11 +27,7 @@ export function LeaderSummary({ leaders }) {
                                 : leader.value}
                         </strong>
                         <em
-                            className={`inline-flex rounded-full px-2.5 py-1 text-sm font-black not-italic ${
-                                isPositive
-                                    ? "bg-cyan-400/15 text-cyan-100"
-                                    : "bg-amber-400/15 text-amber-100"
-                            }`}
+                            className={`inline-flex rounded-full px-2.5 py-1 text-sm font-black not-italic ${leader.borderColor} ${leader.bgColor}`}
                         >
                             {leader.metric}
                         </em>
