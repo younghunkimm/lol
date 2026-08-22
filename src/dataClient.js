@@ -268,14 +268,14 @@ export async function loginWithPassword(password) {
     };
 }
 
-export async function loadRemoteData() {
+export async function loadRemoteData(options) {
     const client = await requireSession();
     const [friendsResult, sessionsPage, statsResult] = await Promise.all([
         client
             .from("friends")
             .select("*")
             .order("created_at", { ascending: false }),
-        loadSessionPage(client),
+        loadSessionPage(client, options),
         client.from("friend_stats").select("*"),
     ]);
 

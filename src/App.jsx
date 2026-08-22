@@ -119,47 +119,6 @@ function App() {
         setIsLoading(false);
     }, []);
 
-    useEffect(() => {
-        let ignore = false;
-
-        async function loadData() {
-            if (!authToken) {
-                setIsLoading(false);
-                return;
-            }
-
-            try {
-                const nextData = await loadRemoteData(authToken);
-                if (!ignore) {
-                    sessionLimitRef.current = nextData.sessions.length;
-                    setData(nextData);
-                }
-            } catch (loadError) {
-                if (ignore) {
-                    return;
-                }
-
-                if (loadError.status === 401) {
-                    resetAuth();
-                    return;
-                }
-
-                setError({
-                    message: loadError.message,
-                    id: Date.now(),
-                });
-            } finally {
-                setIsLoading(false);
-            }
-        }
-
-        loadData();
-
-        return () => {
-            ignore = true;
-        };
-    }, [authToken, resetAuth]);
-
     const handleRemoteError = useCallback(
         (remoteError, errorHandler) => {
             if (remoteError.status === 401) {
@@ -203,6 +162,65 @@ function App() {
         setData((current) => ({ ...current, games }));
     }, []);
 
+    const refreshAllData = useCallback(async (shouldApply = () => true) => {
+        const limit = Math.max(sessionLimitRef.current, SESSION_PAGE_SIZE);
+        const nextData = await loadRemoteData({ limit });
+        const sessions = uniqueById(nextData.sessions);
+
+        if (!shouldApply()) {
+            return false;
+        }
+
+        sessionLimitRef.current = sessions.length;
+        setData((current) => ({
+            ...nextData,
+            sessions,
+            // Games are loaded only for the session currently open in the modal.
+            games: current.games,
+        }));
+
+        return true;
+    }, []);
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadData() {
+            if (!authToken) {
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                await refreshAllData(() => !ignore);
+            } catch (loadError) {
+                if (ignore) {
+                    return;
+                }
+
+                if (loadError.status === 401) {
+                    resetAuth();
+                    return;
+                }
+
+                setError({
+                    message: loadError.message,
+                    id: Date.now(),
+                });
+            } finally {
+                if (!ignore) {
+                    setIsLoading(false);
+                }
+            }
+        }
+
+        loadData();
+
+        return () => {
+            ignore = true;
+        };
+    }, [authToken, refreshAllData, resetAuth]);
+
     useEffect(() => {
         let ignore = false;
 
@@ -242,12 +260,25 @@ function App() {
 
         let unsubscribe = () => {};
         let closed = false;
+        let channelGeneration = 0;
+
+        async function refreshAfterResume() {
+            const openSessionId = activeSessionIdRef.current;
+
+            await refreshAllData();
+
+            if (openSessionId) {
+                await refreshSessionGames(openSessionId);
+            }
+        }
 
         async function bindRealtime() {
+            const generation = ++channelGeneration;
+
             try {
                 const nextUnsubscribe = await subscribeToRemoteChanges(
                     ({ table, payload }) => {
-                        if (closed) {
+                        if (closed || generation !== channelGeneration) {
                             return;
                         }
 
@@ -282,7 +313,7 @@ function App() {
                     },
                 );
 
-                if (closed) {
+                if (closed || generation !== channelGeneration) {
                     nextUnsubscribe();
                     return;
                 }
@@ -293,16 +324,66 @@ function App() {
             }
         }
 
+        let reconnecting = Promise.resolve();
+        let reconnectQueued = false;
+
+        function reconnectRealtime() {
+            if (closed || reconnectQueued) {
+                return;
+            }
+
+            reconnectQueued = true;
+            reconnecting = reconnecting
+                .catch(() => {})
+                .then(async () => {
+                    if (closed) {
+                        return;
+                    }
+
+                    channelGeneration += 1;
+                    const previousUnsubscribe = unsubscribe;
+                    unsubscribe = () => {};
+                    previousUnsubscribe();
+
+                    try {
+                        await refreshAfterResume();
+                    } catch (remoteError) {
+                        handleRemoteError(remoteError, setError);
+                    }
+
+                    if (!closed) {
+                        await bindRealtime();
+                    }
+                })
+                .finally(() => {
+                    reconnectQueued = false;
+                });
+        }
+
+        function handleAppResume() {
+            if (document.visibilityState === "visible") {
+                reconnectRealtime();
+            }
+        }
+
         bindRealtime();
+        document.addEventListener("visibilitychange", handleAppResume);
+        window.addEventListener("focus", handleAppResume);
+        window.addEventListener("online", handleAppResume);
 
         return () => {
             closed = true;
+            channelGeneration += 1;
+            document.removeEventListener("visibilitychange", handleAppResume);
+            window.removeEventListener("focus", handleAppResume);
+            window.removeEventListener("online", handleAppResume);
             unsubscribe();
         };
     }, [
         authToken,
         handleRemoteError,
         refreshFriends,
+        refreshAllData,
         refreshSessionGames,
         refreshSessions,
         refreshStats,
