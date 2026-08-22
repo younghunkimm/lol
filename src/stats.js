@@ -65,6 +65,24 @@ export function createLeaders(stats) {
         return rows.filter((row) => getScore(row) === bestScore);
     };
 
+    const getWinLeaders = (rows) => {
+        if (!rows.length) {
+            return [emptyLeader];
+        }
+
+        const highestWinRate = Math.max(...rows.map((row) => row.winRate));
+        const highestWinRateRows = rows.filter(
+            (row) => row.winRate === highestWinRate,
+        );
+        const maxWins = Math.max(
+            ...highestWinRateRows.map((row) => row.wins - row.losses),
+        );
+
+        return highestWinRateRows.filter(
+            (row) => row.wins - row.losses === maxWins,
+        );
+    };
+
     const getLossLeaders = (rows) => {
         if (!rows.length) {
             return [emptyLeader];
@@ -75,10 +93,12 @@ export function createLeaders(stats) {
             (row) => row.winRate === lowestWinRate,
         );
         const maxLosses = Math.max(
-            ...lowestWinRateRows.map((row) => row.losses),
+            ...lowestWinRateRows.map((row) => row.losses - row.wins),
         );
 
-        return lowestWinRateRows.filter((row) => row.losses === maxLosses);
+        return lowestWinRateRows.filter(
+            (row) => row.losses - row.wins === maxLosses,
+        );
     };
 
     const formatNames = (leaders) => leaders.map((leader) => leader.name);
@@ -86,9 +106,7 @@ export function createLeaders(stats) {
 
     const playedStats = stats.filter((row) => row.wins + row.losses > 0);
     const hasPlayedGames = playedStats.length > 0;
-    const winsLeaders = hasPlayedGames
-        ? getLeaders((row) => row.wins - row.losses, playedStats)
-        : [emptyLeader];
+    const winsLeaders = getWinLeaders(playedStats);
     const receivedLeaders = hasPlayedGames
         ? getLeaders((row) => row.received - row.paid)
         : [emptyLeader];
