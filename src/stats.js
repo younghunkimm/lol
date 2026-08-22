@@ -191,8 +191,10 @@ export function createSessionSettlements({ participants, games, session }) {
         });
     });
 
-    return rows.map((row) => ({
-        ...row,
-        net: row.received - row.paid,
-    }));
+    return rows
+        .map((row) => ({
+            ...row,
+            net: row.received - row.paid,
+        }))
+        .sort((a, b) => b.net - a.net || a.name.localeCompare(b.name, "ko"));
 }
