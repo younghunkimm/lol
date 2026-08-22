@@ -42,9 +42,9 @@ export async function setStoredAuthToken({
 }
 
 export function clearAuthToken() {
+    // Auth recovery can overlap with a new sign-in, so do not asynchronously sign out here.
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(AUTH_EXPIRES_AT_KEY);
-    supabase?.auth.signOut().catch(() => {});
 }
 
 function createAuthError(message = "로그인이 필요합니다") {

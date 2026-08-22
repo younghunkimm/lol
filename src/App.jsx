@@ -99,6 +99,7 @@ function App() {
     const activeSessionIdRef = useRef("");
     const sessionLimitRef = useRef(SESSION_PAGE_SIZE);
     const isCreatingSessionRef = useRef(false);
+    const hasShownAuthResetToastRef = useRef(false);
     const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
     const [friendName, setFriendName] = useState("");
@@ -114,9 +115,19 @@ function App() {
     });
 
     const resetAuth = useCallback(() => {
+        const shouldShowToast = !hasShownAuthResetToastRef.current;
+
+        hasShownAuthResetToastRef.current = true;
         clearAuthToken();
         setAuthToken("");
         setIsLoading(false);
+
+        if (shouldShowToast) {
+            showToast(
+                "로그인 상태를 확인하지 못했습니다. 비밀번호를 다시 입력해 주세요.",
+                "error",
+            );
+        }
     }, []);
 
     const handleRemoteError = useCallback(
@@ -458,6 +469,7 @@ function App() {
 
         setAuthError("");
         setIsAuthenticating(true);
+        hasShownAuthResetToastRef.current = false;
 
         try {
             const authSession = await loginWithPassword(trimmedPassword);
