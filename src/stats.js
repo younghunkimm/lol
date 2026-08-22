@@ -67,12 +67,52 @@ export function createLeaders(stats) {
         return playedStats.filter((row) => getScore(row) === bestScore);
     };
 
+    const getWinLeaders = () => {
+        if (!playedStats.length) {
+            return [emptyLeader];
+        }
+
+        const highestWinRate = Math.max(
+            ...playedStats.map((row) => row.winRate),
+        );
+        const highestWinRateRows = playedStats.filter(
+            (row) => row.winRate === highestWinRate,
+        );
+        const maxWins = Math.max(
+            ...highestWinRateRows.map((row) => row.wins - row.losses),
+        );
+
+        return highestWinRateRows.filter(
+            (row) => row.wins - row.losses === maxWins,
+        );
+    };
+
+    const getLossLeaders = () => {
+        if (!playedStats.length) {
+            return [emptyLeader];
+        }
+
+        const lowestWinRate = Math.min(
+            ...playedStats.map((row) => row.winRate),
+        );
+        const lowestWinRateRows = playedStats.filter(
+            (row) => row.winRate === lowestWinRate,
+        );
+        const maxLosses = Math.max(
+            ...lowestWinRateRows.map((row) => row.losses - row.wins),
+        );
+
+        return lowestWinRateRows.filter(
+            (row) => row.losses - row.wins === maxLosses,
+        );
+    };
+
     const formatNames = (leaders) => leaders.map((leader) => leader.name);
     const firstLeader = (leaders) => leaders[0] ?? emptyLeader;
 
-    const winsLeaders = getLeaders((row) => row.wins);
+    const winsLeaders = getWinLeaders();
     const receivedLeaders = getLeaders((row) => row.received - row.paid);
-    const lossesLeaders = getLeaders((row) => row.losses);
+    const lossesLeaders = getLossLeaders();
     const paidLeaders = getLeaders((row) => row.paid - row.received);
 
     const winsLeader = firstLeader(winsLeaders);
@@ -82,9 +122,9 @@ export function createLeaders(stats) {
 
     return [
         {
-            label: "최다 승리",
+            label: "최다 승률",
             value: formatNames(winsLeaders),
-            metric: `${winsLeader.wins}승`,
+            metric: `${winsLeader.winRate}%`,
             textColor: "text-sky-500",
             bgColor: "bg-sky-400/20",
             borderColor: "border-sky-400/10",
@@ -98,9 +138,9 @@ export function createLeaders(stats) {
             borderColor: "border-emerald-400/10",
         },
         {
-            label: "최다 패배",
+            label: "최저 승률",
             value: formatNames(lossesLeaders),
-            metric: `${lossesLeader.losses}패`,
+            metric: `${lossesLeader.winRate}%`,
             textColor: "text-purple-500",
             bgColor: "bg-purple-400/20",
             borderColor: "border-purple-400/10",
