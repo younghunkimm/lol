@@ -47,9 +47,13 @@ export function clearAuthToken() {
     localStorage.removeItem(AUTH_EXPIRES_AT_KEY);
 }
 
-function createAuthError(message = "로그인이 필요합니다") {
+function createAuthError(
+    message = "로그인이 필요합니다",
+    operation = "Supabase 세션 확인",
+) {
     const error = new Error(message);
     error.status = 401;
+    error.operation = operation;
     return error;
 }
 
@@ -66,8 +70,7 @@ async function requireSession() {
     const { data, error } = await client.auth.getSession();
 
     if (error || !data.session) {
-        clearAuthToken();
-        throw createAuthError(error?.message);
+        throw createAuthError(error?.message, "Supabase 세션 확인");
     }
 
     if (data.session.access_token !== localStorage.getItem(AUTH_TOKEN_KEY)) {
@@ -90,6 +93,7 @@ function throwIfError(operation, error) {
 
     const nextError = new Error(`${operation} 실패: ${error.message}`);
     nextError.status = error.status;
+    nextError.operation = operation;
 
     if (
         error.status === 401 ||
@@ -97,10 +101,21 @@ function throwIfError(operation, error) {
         error.code === "PGRST301"
     ) {
         nextError.status = 401;
-        clearAuthToken();
     }
 
     throw nextError;
+}
+
+// 새 JWT가 Auth와 Data API의 일시적인 시각 차이로 거절될 수 있어 재시도 대상을 구분한다.
+// https://github.com/orgs/supabase/discussions/48123
+function isJwtIssuedInFutureError(error) {
+    return /jwt issued at future/i.test(error?.message);
+}
+
+function wait(milliseconds) {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, milliseconds);
+    });
 }
 
 function fromFriendRow(row) {
@@ -268,7 +283,7 @@ export async function loginWithPassword(password) {
     };
 }
 
-export async function loadRemoteData(options) {
+async function loadRemoteDataOnce(options) {
     const client = await requireSession();
     const [friendsResult, sessionsPage, statsResult] = await Promise.all([
         client
@@ -290,6 +305,24 @@ export async function loadRemoteData(options) {
         hasMoreSessions: sessionsPage.hasMore,
         totalSessions: sessionsPage.totalCount,
     };
+}
+
+export async function loadRemoteData(options) {
+    const retryDelays = [1000, 2000, 4000];
+
+    for (const delay of retryDelays) {
+        try {
+            return await loadRemoteDataOnce(options);
+        } catch (error) {
+            if (!isJwtIssuedInFutureError(error)) {
+                throw error;
+            }
+
+            await wait(delay);
+        }
+    }
+
+    return loadRemoteDataOnce(options);
 }
 
 export async function loadFriends() {

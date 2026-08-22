@@ -18,6 +18,22 @@ export function showToast(message, icon = "info") {
     });
 }
 
+export function showAlert(message, icon = "error") {
+    if (!message) {
+        return;
+    }
+
+    return Swal.fire({
+        title: "확인 필요",
+        text: message,
+        icon,
+        confirmButtonText: "확인",
+        background: "#111722",
+        color: "#e2e8f0",
+        confirmButtonColor: "#22d3ee",
+    });
+}
+
 export async function confirmAction({
     title,
     text,

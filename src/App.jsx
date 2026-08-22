@@ -7,7 +7,7 @@ import { SessionList } from "./components/SessionList";
 import { SessionModal } from "./components/SessionModal";
 import { StatsTable } from "./components/StatsTable";
 import { Button, Panel, TextInput } from "./components/ui";
-import { confirmAction, showToast } from "./alerts";
+import { confirmAction, showAlert, showToast } from "./alerts";
 import {
     clearAuthToken,
     deleteFriend as deleteRemoteFriend,
@@ -97,6 +97,7 @@ function App() {
     const [modalError, setModalError] = useState(null);
     const [activeSessionId, setActiveSessionId] = useState("");
     const activeSessionIdRef = useRef("");
+    const authTokenRef = useRef(authToken);
     const sessionLimitRef = useRef(SESSION_PAGE_SIZE);
     const isCreatingSessionRef = useRef(false);
     const hasShownAuthResetToastRef = useRef(false);
@@ -114,26 +115,42 @@ function App() {
         note: "",
     });
 
-    const resetAuth = useCallback(() => {
+    const setCurrentAuthToken = useCallback((token) => {
+        authTokenRef.current = token;
+        setAuthToken(token);
+    }, []);
+
+    const resetAuth = useCallback((expectedToken, operation, reason) => {
+        if (expectedToken && expectedToken !== authTokenRef.current) {
+            return;
+        }
+
         const shouldShowToast = !hasShownAuthResetToastRef.current;
 
         hasShownAuthResetToastRef.current = true;
         clearAuthToken();
-        setAuthToken("");
+        setCurrentAuthToken("");
         setIsLoading(false);
 
         if (shouldShowToast) {
-            showToast(
-                "로그인 상태를 확인하지 못했습니다. 비밀번호를 다시 입력해 주세요.",
-                "error",
+            const detail = reason
+                ? `${operation ?? "인증 확인"}: ${reason}`
+                : `${operation ?? "인증 확인"} 중 인증에 실패했습니다.`;
+
+            showAlert(
+                `${detail} 비밀번호를 다시 입력해 주세요.`,
             );
         }
-    }, []);
+    }, [setCurrentAuthToken]);
 
     const handleRemoteError = useCallback(
-        (remoteError, errorHandler) => {
+        (remoteError, errorHandler, expectedToken) => {
             if (remoteError.status === 401) {
-                resetAuth();
+                resetAuth(
+                    expectedToken,
+                    remoteError.operation,
+                    remoteError.message,
+                );
                 return;
             }
 
@@ -210,7 +227,11 @@ function App() {
                 }
 
                 if (loadError.status === 401) {
-                    resetAuth();
+                    resetAuth(
+                        authToken,
+                        loadError.operation,
+                        loadError.message,
+                    );
                     return;
                 }
 
@@ -248,7 +269,7 @@ function App() {
                 }
             } catch (loadError) {
                 if (!ignore) {
-                    handleRemoteError(loadError, setModalError);
+                    handleRemoteError(loadError, setModalError, authToken);
                 }
             }
         }
@@ -298,13 +319,21 @@ function App() {
                                 refreshFriends(),
                                 refreshStats(),
                             ]).catch((remoteError) =>
-                                handleRemoteError(remoteError, setError),
+                                handleRemoteError(
+                                    remoteError,
+                                    setError,
+                                    authToken,
+                                ),
                             );
                         }
 
                         if (table === "sessions") {
                             refreshSessions().catch((remoteError) =>
-                                handleRemoteError(remoteError, setError),
+                                handleRemoteError(
+                                    remoteError,
+                                    setError,
+                                    authToken,
+                                ),
                             );
                         }
 
@@ -318,7 +347,11 @@ function App() {
                                     ? refreshSessionGames(openSessionId)
                                     : Promise.resolve(),
                             ]).catch((remoteError) =>
-                                handleRemoteError(remoteError, setError),
+                                handleRemoteError(
+                                    remoteError,
+                                    setError,
+                                    authToken,
+                                ),
                             );
                         }
                     },
@@ -331,7 +364,7 @@ function App() {
 
                 unsubscribe = nextUnsubscribe;
             } catch (remoteError) {
-                handleRemoteError(remoteError, setError);
+                handleRemoteError(remoteError, setError, authToken);
             }
         }
 
@@ -359,7 +392,7 @@ function App() {
                     try {
                         await refreshAfterResume();
                     } catch (remoteError) {
-                        handleRemoteError(remoteError, setError);
+                        handleRemoteError(remoteError, setError, authToken);
                     }
 
                     if (!closed) {
@@ -446,7 +479,11 @@ function App() {
             return true;
         } catch (actionError) {
             if (actionError.status === 401) {
-                resetAuth();
+                resetAuth(
+                    authToken,
+                    actionError.operation,
+                    actionError.message,
+                );
                 return false;
             }
 
@@ -476,7 +513,7 @@ function App() {
             await setStoredAuthToken(authSession);
             setPassword("");
             setIsLoading(true);
-            setAuthToken(authSession.accessToken);
+            setCurrentAuthToken(authSession.accessToken);
         } catch (loginError) {
             clearAuthToken();
             setAuthError(loginError.message);
@@ -501,7 +538,7 @@ function App() {
         if (saved) {
             setFriendName("");
             Promise.all([refreshStats(), refreshFriends()]).catch((loadError) =>
-                handleRemoteError(loadError, setError),
+                handleRemoteError(loadError, setError, authToken),
             );
         }
     }
@@ -512,7 +549,7 @@ function App() {
         try {
             isUsed = await hasFriendRecords(friendId);
         } catch (loadError) {
-            handleRemoteError(loadError, setError);
+            handleRemoteError(loadError, setError, authToken);
             return;
         }
 
@@ -536,7 +573,7 @@ function App() {
         );
         if (saved) {
             Promise.all([refreshStats(), refreshFriends()]).catch((loadError) =>
-                handleRemoteError(loadError, setError),
+                handleRemoteError(loadError, setError, authToken),
             );
         }
     }
@@ -600,11 +637,15 @@ function App() {
             });
             setActiveSessionId(savedSession.id);
             Promise.all([refreshSessions(), refreshStats()]).catch(
-                (loadError) => handleRemoteError(loadError, setError),
+                (loadError) => handleRemoteError(loadError, setError, authToken),
             );
         } catch (actionError) {
             if (actionError.status === 401) {
-                resetAuth();
+                resetAuth(
+                    authToken,
+                    actionError.operation,
+                    actionError.message,
+                );
                 return;
             }
 
@@ -647,7 +688,7 @@ function App() {
         }
         if (saved) {
             Promise.all([refreshSessions(), refreshStats()]).catch(
-                (loadError) => handleRemoteError(loadError, setError),
+                (loadError) => handleRemoteError(loadError, setError, authToken),
             );
         }
     }
@@ -684,7 +725,7 @@ function App() {
                 };
             });
         } catch (loadError) {
-            handleRemoteError(loadError, setError);
+            handleRemoteError(loadError, setError, authToken);
         } finally {
             setIsLoadingMoreSessions(false);
         }
@@ -745,7 +786,7 @@ function App() {
                 refreshSessions(),
                 refreshStats(),
             ]).catch((loadError) =>
-                handleRemoteError(loadError, setModalError),
+                handleRemoteError(loadError, setModalError, authToken),
             );
         }
     }
@@ -773,7 +814,7 @@ function App() {
                 refreshSessions(),
                 refreshStats(),
             ]).catch((loadError) =>
-                handleRemoteError(loadError, setModalError),
+                handleRemoteError(loadError, setModalError, authToken),
             );
         }
     }
