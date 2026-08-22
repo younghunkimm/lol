@@ -121,28 +121,29 @@ function App() {
         setAuthToken(token);
     }, []);
 
-    const resetAuth = useCallback((expectedToken, operation, reason) => {
-        if (expectedToken && expectedToken !== authTokenRef.current) {
-            return;
-        }
+    const resetAuth = useCallback(
+        (expectedToken, operation, reason) => {
+            if (expectedToken && expectedToken !== authTokenRef.current) {
+                return;
+            }
 
-        const shouldShowToast = !hasShownAuthResetToastRef.current;
+            const shouldShowToast = !hasShownAuthResetToastRef.current;
 
-        hasShownAuthResetToastRef.current = true;
-        clearAuthToken();
-        setCurrentAuthToken("");
-        setIsLoading(false);
+            hasShownAuthResetToastRef.current = true;
+            clearAuthToken();
+            setCurrentAuthToken("");
+            setIsLoading(false);
 
-        if (shouldShowToast) {
-            const detail = reason
-                ? `${operation ?? "인증 확인"}: ${reason}`
-                : `${operation ?? "인증 확인"} 중 인증에 실패했습니다.`;
+            if (shouldShowToast) {
+                const detail = reason
+                    ? `${operation ?? "인증 확인"}: ${reason}`
+                    : `${operation ?? "인증 확인"} 중 인증에 실패했습니다.`;
 
-            showAlert(
-                `${detail} 비밀번호를 다시 입력해 주세요.`,
-            );
-        }
-    }, [setCurrentAuthToken]);
+                showAlert(`${detail} 비밀번호를 다시 입력해 주세요.`);
+            }
+        },
+        [setCurrentAuthToken],
+    );
 
     const handleRemoteError = useCallback(
         (remoteError, errorHandler, expectedToken) => {
@@ -532,7 +533,12 @@ function App() {
         event.preventDefault();
         const name = friendName.trim();
 
-        if (!name || data.friends.some((friend) => friend.name === name)) {
+        if (!name) {
+            return;
+        }
+
+        if (data.friends.some((friend) => friend.name === name)) {
+            showToast("이미 등록된 프로게이머입니다.", "error");
             return;
         }
 
@@ -643,7 +649,8 @@ function App() {
             });
             setActiveSessionId(savedSession.id);
             Promise.all([refreshSessions(), refreshStats()]).catch(
-                (loadError) => handleRemoteError(loadError, setError, authToken),
+                (loadError) =>
+                    handleRemoteError(loadError, setError, authToken),
             );
         } catch (actionError) {
             if (actionError.status === 401) {
@@ -694,7 +701,8 @@ function App() {
         }
         if (saved) {
             Promise.all([refreshSessions(), refreshStats()]).catch(
-                (loadError) => handleRemoteError(loadError, setError, authToken),
+                (loadError) =>
+                    handleRemoteError(loadError, setError, authToken),
             );
         }
     }
