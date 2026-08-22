@@ -479,12 +479,12 @@ function App() {
     const stats = useMemo(() => sortStats(data.stats), [data.stats]);
     const leaders = useMemo(() => createLeaders(stats), [stats]);
 
-    async function commit(nextData, action, errorHandler = setError) {
+    async function commit(action, updateData, errorHandler = setError) {
         errorHandler(null);
 
         try {
             await action();
-            setData(nextData);
+            setData(updateData);
             return true;
         } catch (actionError) {
             if (actionError.status === 401) {
@@ -546,8 +546,13 @@ function App() {
 
         const friend = { id: createId(), name, createdAt: nowIso() };
         const saved = await commit(
-            { ...data, friends: [friend, ...data.friends] },
             () => insertFriend(authToken, friend),
+            (current) => ({
+                ...current,
+                friends: current.friends.some((item) => item.id === friend.id)
+                    ? current.friends
+                    : [friend, ...current.friends],
+            }),
         );
         if (saved) {
             setFriendName("");
@@ -577,13 +582,13 @@ function App() {
         }
 
         const saved = await commit(
-            {
-                ...data,
-                friends: data.friends.filter(
+            () => deleteRemoteFriend(authToken, friendId),
+            (current) => ({
+                ...current,
+                friends: current.friends.filter(
                     (friend) => friend.id !== friendId,
                 ),
-            },
-            () => deleteRemoteFriend(authToken, friendId),
+            }),
         );
         if (saved) {
             Promise.all([refreshStats(), refreshFriends()]).catch((loadError) =>
@@ -685,17 +690,26 @@ function App() {
             return;
         }
 
-        const nextData = {
-            ...data,
-            sessions: data.sessions.filter(
-                (session) => session.id !== sessionId,
-            ),
-            games: data.games.filter((game) => game.sessionId !== sessionId),
-            totalSessions: Math.max(data.totalSessions - 1, 0),
-        };
+        const saved = await commit(
+            () => deleteRemoteSession(authToken, sessionId),
+            (current) => {
+                const sessionExists = current.sessions.some(
+                    (session) => session.id === sessionId,
+                );
 
-        const saved = await commit(nextData, () =>
-            deleteRemoteSession(authToken, sessionId),
+                return {
+                    ...current,
+                    sessions: current.sessions.filter(
+                        (session) => session.id !== sessionId,
+                    ),
+                    games: current.games.filter(
+                        (game) => game.sessionId !== sessionId,
+                    ),
+                    totalSessions: sessionExists
+                        ? Math.max(current.totalSessions - 1, 0)
+                        : current.totalSessions,
+                };
+            },
         );
 
         if (saved && activeSessionId === sessionId) {
@@ -725,13 +739,13 @@ function App() {
 
         try {
             const saved = await commit(
-                {
-                    ...data,
-                    sessions: data.sessions.map((item) =>
+                () => updateRemoteSessionLock(authToken, sessionId, isLocked),
+                (current) => ({
+                    ...current,
+                    sessions: current.sessions.map((item) =>
                         item.id === sessionId ? { ...item, isLocked } : item,
                     ),
-                },
-                () => updateRemoteSessionLock(authToken, sessionId, isLocked),
+                }),
                 setModalError,
             );
 
@@ -827,8 +841,13 @@ function App() {
         };
 
         const saved = await commit(
-            { ...data, games: [...data.games, game] },
             () => insertGame(authToken, game),
+            (current) => ({
+                ...current,
+                games: current.games.some((item) => item.id === game.id)
+                    ? current.games
+                    : [...current.games, game],
+            }),
             setModalError,
         );
         if (saved) {
@@ -854,8 +873,11 @@ function App() {
         }
 
         const saved = await commit(
-            { ...data, games: data.games.filter((game) => game.id !== gameId) },
             () => deleteRemoteGame(authToken, gameId),
+            (current) => ({
+                ...current,
+                games: current.games.filter((game) => game.id !== gameId),
+            }),
             setModalError,
         );
         if (saved) {
