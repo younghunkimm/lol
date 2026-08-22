@@ -40,47 +40,53 @@ export function StatsTable({ stats }) {
                             items={stats}
                             renderItem={(row) => (
                                 <>
-                                <td className="px-3 py-3">{row.name}</td>
-                                <td
-                                    className={`px-3 py-3 font-black ${getNetClass(row.net)}`}
-                                >
-                                    <AnimatedNumber
-                                        format={formatMoney}
-                                        value={row.net}
-                                    />
-                                </td>
-                                <td
-                                    className={`px-3 py-3 font-black ${getWinRateClass(row.winRate)}`}
-                                >
-                                    <AnimatedNumber
-                                        format={(value) => `${value}%`}
-                                        value={row.winRate}
-                                    />
-                                </td>
-                                <td className="px-3 py-3">
-                                    <AnimatedNumber
-                                        format={String}
-                                        value={row.wins}
-                                    />
-                                </td>
-                                <td className="px-3 py-3">
-                                    <AnimatedNumber
-                                        format={String}
-                                        value={row.losses}
-                                    />
-                                </td>
-                                <td className="px-3 py-3">
-                                    <AnimatedNumber
-                                        format={formatMoney}
-                                        value={row.paid}
-                                    />
-                                </td>
-                                <td className="px-3 py-3">
-                                    <AnimatedNumber
-                                        format={formatMoney}
-                                        value={row.received}
-                                    />
-                                </td>
+                                    <td className="px-3 py-3">{row.name}</td>
+                                    <td
+                                        className={`px-3 py-3 font-black ${getNetClass(row.net)}`}
+                                    >
+                                        <AnimatedNumber
+                                            animateInitial
+                                            format={formatMoney}
+                                            value={row.net}
+                                        />
+                                    </td>
+                                    <td
+                                        className={`px-3 py-3 font-black ${getWinRateClass(row.winRate)}`}
+                                    >
+                                        <AnimatedNumber
+                                            animateInitial
+                                            format={(value) => `${value}%`}
+                                            value={row.winRate}
+                                        />
+                                    </td>
+                                    <td className="px-3 py-3">
+                                        <AnimatedNumber
+                                            animateInitial
+                                            format={String}
+                                            value={row.wins}
+                                        />
+                                    </td>
+                                    <td className="px-3 py-3">
+                                        <AnimatedNumber
+                                            animateInitial
+                                            format={String}
+                                            value={row.losses}
+                                        />
+                                    </td>
+                                    <td className="px-3 py-3">
+                                        <AnimatedNumber
+                                            animateInitial
+                                            format={formatMoney}
+                                            value={row.paid}
+                                        />
+                                    </td>
+                                    <td className="px-3 py-3">
+                                        <AnimatedNumber
+                                            animateInitial
+                                            format={formatMoney}
+                                            value={row.received}
+                                        />
+                                    </td>
                                 </>
                             )}
                         />

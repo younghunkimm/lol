@@ -22,7 +22,10 @@ export function LeaderSummary({ leaders }) {
                             {leader.label}
                         </span>
                         <strong className="block w-full text-lg font-black leading-tight text-slate-50 sm:text-xl">
-                            <AnimatedText value={leader.value.join("|")}>
+                            <AnimatedText
+                                animateInitial
+                                value={leader.value.join("|")}
+                            >
                                 {leader.value.map((name) => (
                                     <span className="block truncate" key={name}>
                                         {name}
@@ -34,6 +37,7 @@ export function LeaderSummary({ leaders }) {
                             className={`inline-flex rounded-full px-2.5 py-1 text-sm font-black not-italic ${leader.borderColor} ${leader.bgColor}`}
                         >
                             <AnimatedNumber
+                                animateInitial
                                 format={(value) =>
                                     formatMetric(value, leader.metricFormat)
                                 }

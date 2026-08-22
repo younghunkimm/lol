@@ -21,6 +21,7 @@ function SettlementRow({ row, animate }) {
                 className={`text-base font-black ${getSignedMoneyClass(row.net)}`}
             >
                 <AnimatedNumber
+                    animateInitial
                     enabled={animate}
                     format={formatSignedMoney}
                     value={row.net}

@@ -62,10 +62,16 @@ export function AnimatedList({
     );
 }
 
-export function AnimatedNumber({ enabled = true, format, value }) {
+export function AnimatedNumber({
+    animateInitial = false,
+    enabled = true,
+    format,
+    value,
+}) {
     const reducedMotion = useReducedMotion();
-    const previousValue = useRef(value);
-    const [displayValue, setDisplayValue] = useState(value);
+    const initialValue = animateInitial ? 0 : value;
+    const previousValue = useRef(initialValue);
+    const [displayValue, setDisplayValue] = useState(initialValue);
 
     useEffect(() => {
         if (!enabled || reducedMotion) {
@@ -77,20 +83,22 @@ export function AnimatedNumber({ enabled = true, format, value }) {
             duration: 0.6,
             ease: "easeOut",
             onUpdate: (nextValue) => setDisplayValue(Math.round(nextValue)),
+            onComplete: () => {
+                previousValue.current = value;
+            },
         });
 
-        previousValue.current = value;
         return () => controls.stop();
     }, [enabled, reducedMotion, value]);
 
     return format(enabled && !reducedMotion ? displayValue : value);
 }
 
-export function AnimatedText({ children, value }) {
+export function AnimatedText({ animateInitial = false, children, value }) {
     const reducedMotion = useReducedMotion();
 
     return (
-        <AnimatePresence initial={false} mode="wait">
+        <AnimatePresence initial={animateInitial} mode="wait">
             <motion.span
                 animate={{ opacity: 1, y: 0 }}
                 exit={reducedMotion ? undefined : { opacity: 0, y: -10 }}
