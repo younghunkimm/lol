@@ -164,6 +164,8 @@ export function createSessionSettlements({ participants, games, session }) {
 
     const rows = participants.map((friend) => ({
         ...friend,
+        wins: 0,
+        losses: 0,
         paid: 0,
         received: 0,
         net: 0,
@@ -175,12 +177,16 @@ export function createSessionSettlements({ participants, games, session }) {
 
         game.loserIds.forEach((friendId) => {
             if (rowMap.has(friendId)) {
-                rowMap.get(friendId).paid += settlement.payerAmount;
+                const row = rowMap.get(friendId);
+                row.losses += 1;
+                row.paid += settlement.payerAmount;
             }
         });
         game.winnerIds.forEach((friendId) => {
             if (rowMap.has(friendId)) {
-                rowMap.get(friendId).received += settlement.receiverAmount;
+                const row = rowMap.get(friendId);
+                row.wins += 1;
+                row.received += settlement.receiverAmount;
             }
         });
     });

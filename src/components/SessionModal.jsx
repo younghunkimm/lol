@@ -61,9 +61,15 @@ function SettlementPanel({ rows }) {
                         className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-white/5 bg-white/[0.04] px-3 py-2.5"
                         key={row.id}
                     >
-                        <span className="truncate text-sm font-extrabold text-slate-200">
-                            {row.name}
-                        </span>
+                        <div className="min-w-0">
+                            <span className="block truncate text-sm font-extrabold text-slate-200">
+                                {row.name}
+                            </span>
+                            <span className="mt-0.5 block text-xs font-bold text-slate-400">
+                                <span className="text-cyan-300">{row.wins}승</span>{" "}
+                                <span className="text-rose-300">{row.losses}패</span>
+                            </span>
+                        </div>
                         <strong
                             className={`text-base font-black ${getSignedMoneyClass(row.net)}`}
                         >
