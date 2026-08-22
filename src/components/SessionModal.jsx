@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import {
     formatMoney,
     formatSignedMoney,
@@ -57,9 +58,11 @@ function SettlementPanel({ rows }) {
             <h3 className="text-lg font-black">자동 정산</h3>
             <div className="grid gap-2">
                 {rows.map((row) => (
-                    <div
+                    <motion.div
                         className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-white/5 bg-white/[0.04] px-3 py-2.5"
                         key={row.id}
+                        layout
+                        transition={{ duration: 0.18 }}
                     >
                         <div className="min-w-0">
                             <span className="block truncate text-sm font-extrabold text-slate-200">
@@ -75,7 +78,7 @@ function SettlementPanel({ rows }) {
                         >
                             {formatSignedMoney(row.net)}
                         </strong>
-                    </div>
+                    </motion.div>
                 ))}
             </div>
         </div>
@@ -276,16 +279,26 @@ export function SessionModal({
                 <div className="mt-4">
                     <h3 className="text-lg font-black">승패 기록</h3>
                     <div className="mt-3 grid gap-2">
-                        {games.map((game, index) => (
-                            <GameRecordCard
+                        <AnimatePresence initial={false}>
+                            {games.map((game, index) => (
+                            <motion.div
+                                key={game.id}
+                                layout
+                                initial={{ opacity: 0, y: -12 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <GameRecordCard
                                 game={game}
                                 gameNumber={games.length - index}
                                 index={index}
                                 friends={friends}
                                 onDeleteGame={onDeleteGame}
-                                key={game.id}
-                            />
-                        ))}
+                                />
+                            </motion.div>
+                            ))}
+                        </AnimatePresence>
                         {!games.length && (
                             <EmptyState>승패 기록이 없습니다.</EmptyState>
                         )}

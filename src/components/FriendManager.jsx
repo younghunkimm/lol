@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "motion/react";
 import { Button, DangerButton, Panel, TextInput } from "./ui";
 
 export function FriendManager({
@@ -32,23 +33,30 @@ export function FriendManager({
                 </Button>
             </form>
             <div className="grid gap-1.5 overflow-y-auto pr-1 flex-[1_0_0] min-h-50">
-                {friends.map((friend) => (
-                    <div
-                        className="flex items-center justify-between gap-2 rounded-xl bg-white/[0.04] px-3 py-2"
-                        key={friend.id}
-                    >
-                        <span className="truncate text-sm font-extrabold text-slate-200">
-                            {friend.name}
-                        </span>
-                        <DangerButton
-                            className="rounded-lg px-2.5 py-1.5 text-xs"
-                            type="button"
-                            onClick={() => onRemoveFriend(friend.id)}
+                <AnimatePresence initial={false}>
+                    {friends.map((friend) => (
+                        <motion.div
+                            className="flex items-center justify-between gap-2 rounded-xl bg-white/[0.04] px-3 py-2"
+                            key={friend.id}
+                            layout
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                            transition={{ duration: 0.18 }}
                         >
-                            삭제
-                        </DangerButton>
-                    </div>
-                ))}
+                            <span className="truncate text-sm font-extrabold text-slate-200">
+                                {friend.name}
+                            </span>
+                            <DangerButton
+                                className="rounded-lg px-2.5 py-1.5 text-xs"
+                                type="button"
+                                onClick={() => onRemoveFriend(friend.id)}
+                            >
+                                삭제
+                            </DangerButton>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
             </div>
         </Panel>
     );

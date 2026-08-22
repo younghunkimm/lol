@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from "motion/react";
 import { formatMoney, getName, sortByCreatedAt } from "../utils";
 import { Button, DangerButton, EmptyState, Panel } from "./ui";
 
@@ -20,10 +21,16 @@ export function SessionList({
                 </span>
             </div>
             <div className="grid gap-3">
-                {sortByCreatedAt(sessions).map((session) => (
-                    <article
+                <AnimatePresence initial={false}>
+                    {sortByCreatedAt(sessions).map((session) => (
+                    <motion.article
                         className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-sm shadow-black/20 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center"
                         key={session.id}
+                        layout
+                        initial={{ opacity: 0, y: -12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -12, scale: 0.98 }}
+                        transition={{ duration: 0.2 }}
                     >
                         <div className="min-w-0">
                             <h3 className="truncate text-base font-black text-slate-50">
@@ -59,8 +66,9 @@ export function SessionList({
                                 삭제
                             </DangerButton>
                         </div>
-                    </article>
-                ))}
+                    </motion.article>
+                    ))}
+                </AnimatePresence>
                 {!sessions.length && (
                     <EmptyState>아직 생성된 세션이 없습니다.</EmptyState>
                 )}

@@ -532,7 +532,7 @@ function App() {
 
         const friend = { id: createId(), name, createdAt: nowIso() };
         const saved = await commit(
-            { ...data, friends: [...data.friends, friend] },
+            { ...data, friends: [friend, ...data.friends] },
             () => insertFriend(authToken, friend),
         );
         if (saved) {
