@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DEFAULT_PRICE, SESSION_PAGE_SIZE, emptyData } from "./constants";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { DEFAULT_PRICE } from "./constants";
 import { FriendManager } from "./components/FriendManager";
 import { LeaderSummary } from "./components/LeaderSummary";
 import { SessionComposer } from "./components/SessionComposer";
@@ -7,27 +7,21 @@ import { SessionList } from "./components/SessionList";
 import { SessionModal } from "./components/SessionModal";
 import { StatsTable } from "./components/StatsTable";
 import { Button, Panel, TextInput } from "./components/ui";
-import { confirmAction, showAlert, showToast } from "./alerts";
+import { confirmAction, showToast } from "./alerts";
 import {
-    clearAuthToken,
     deleteFriend as deleteRemoteFriend,
     deleteGame as deleteRemoteGame,
     deleteSession as deleteRemoteSession,
-    getAuthToken,
     hasFriendRecords,
     insertFriend,
     insertGame,
     insertSession,
-    loginWithPassword,
-    loadFriends,
-    loadRemoteData,
     loadSessionGames,
-    loadSessions,
-    loadStats,
-    setStoredAuthToken,
-    subscribeToRemoteChanges,
     updateSessionLock as updateRemoteSessionLock,
 } from "./dataClient";
+import { useAuth } from "./hooks/useAuth";
+import { useDashboardData } from "./hooks/useDashboardData";
+import { useRealtimeSync } from "./hooks/useRealtimeSync";
 import { createLeaders, createSessionSettlements } from "./stats";
 import {
     createId,
@@ -36,21 +30,6 @@ import {
     nowIso,
     sortByCreatedAt,
 } from "./utils";
-
-function shouldRefreshOpenSession(payload, activeSessionId) {
-    if (!activeSessionId) {
-        return false;
-    }
-
-    return (
-        payload.new?.session_id === activeSessionId ||
-        payload.old?.session_id === activeSessionId
-    );
-}
-
-function uniqueById(items) {
-    return Array.from(new Map(items.map((item) => [item.id, item])).values());
-}
 
 function prependSessionOnce(sessions, session) {
     if (sessions.some((item) => item.id === session.id)) {
@@ -88,21 +67,33 @@ function sortStats(stats) {
 }
 
 function App() {
-    const [data, setData] = useState(emptyData);
-    const [authToken, setAuthToken] = useState(() => getAuthToken());
-    const [password, setPassword] = useState("");
-    const [authError, setAuthError] = useState("");
-    const [isAuthenticating, setIsAuthenticating] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const {
+        authError,
+        authToken,
+        handleRemoteError,
+        isAuthenticating,
+        login,
+        password,
+        setPassword,
+    } = useAuth();
+    const {
+        commit,
+        data,
+        error,
+        isLoading,
+        loadMoreSessions: loadMoreSessionsData,
+        refreshAllData,
+        refreshFriends,
+        refreshSessionGames,
+        refreshSessions,
+        refreshStats,
+        setData,
+        setError,
+    } = useDashboardData({ authToken, handleRemoteError });
     const [modalError, setModalError] = useState(null);
     const [activeSessionId, setActiveSessionId] = useState("");
     const [isSessionGamesLoading, setIsSessionGamesLoading] = useState(false);
-    const activeSessionIdRef = useRef("");
-    const authTokenRef = useRef(authToken);
-    const sessionLimitRef = useRef(SESSION_PAGE_SIZE);
     const isCreatingSessionRef = useRef(false);
-    const hasShownAuthResetToastRef = useRef(false);
     const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
     const [isSessionLockUpdating, setIsSessionLockUpdating] = useState(false);
@@ -117,145 +108,6 @@ function App() {
         loserIds: [],
         note: "",
     });
-
-    const setCurrentAuthToken = useCallback((token) => {
-        authTokenRef.current = token;
-        setAuthToken(token);
-    }, []);
-
-    const resetAuth = useCallback(
-        (expectedToken, operation, reason) => {
-            if (expectedToken && expectedToken !== authTokenRef.current) {
-                return;
-            }
-
-            const shouldShowToast = !hasShownAuthResetToastRef.current;
-
-            hasShownAuthResetToastRef.current = true;
-            clearAuthToken();
-            setCurrentAuthToken("");
-            setIsLoading(false);
-
-            if (shouldShowToast) {
-                const detail = reason
-                    ? `${operation ?? "인증 확인"}: ${reason}`
-                    : `${operation ?? "인증 확인"} 중 인증에 실패했습니다.`;
-
-                showAlert(`${detail} 비밀번호를 다시 입력해 주세요.`);
-            }
-        },
-        [setCurrentAuthToken],
-    );
-
-    const handleRemoteError = useCallback(
-        (remoteError, errorHandler, expectedToken) => {
-            if (remoteError.status === 401) {
-                resetAuth(
-                    expectedToken,
-                    remoteError.operation,
-                    remoteError.message,
-                );
-                return;
-            }
-
-            errorHandler({
-                message: remoteError.message,
-                id: Date.now(),
-            });
-        },
-        [resetAuth],
-    );
-
-    const refreshFriends = useCallback(async () => {
-        const friends = await loadFriends();
-        setData((current) => ({ ...current, friends }));
-    }, []);
-
-    const refreshSessions = useCallback(async () => {
-        const limit = Math.max(sessionLimitRef.current, SESSION_PAGE_SIZE);
-        const { sessions, hasMore, totalCount } = await loadSessions({ limit });
-        const nextSessions = uniqueById(sessions);
-        sessionLimitRef.current = nextSessions.length;
-        setData((current) => ({
-            ...current,
-            sessions: nextSessions,
-            hasMoreSessions: hasMore,
-            totalSessions: totalCount,
-        }));
-    }, []);
-
-    const refreshStats = useCallback(async () => {
-        const stats = await loadStats();
-        setData((current) => ({ ...current, stats }));
-    }, []);
-
-    const refreshSessionGames = useCallback(async (sessionId) => {
-        const games = await loadSessionGames(sessionId);
-        setData((current) => ({ ...current, games }));
-    }, []);
-
-    const refreshAllData = useCallback(async (shouldApply = () => true) => {
-        const limit = Math.max(sessionLimitRef.current, SESSION_PAGE_SIZE);
-        const nextData = await loadRemoteData({ limit });
-        const sessions = uniqueById(nextData.sessions);
-
-        if (!shouldApply()) {
-            return false;
-        }
-
-        sessionLimitRef.current = sessions.length;
-        setData((current) => ({
-            ...nextData,
-            sessions,
-            // Games are loaded only for the session currently open in the modal.
-            games: current.games,
-        }));
-
-        return true;
-    }, []);
-
-    useEffect(() => {
-        let ignore = false;
-
-        async function loadData() {
-            if (!authToken) {
-                setIsLoading(false);
-                return;
-            }
-
-            try {
-                await refreshAllData(() => !ignore);
-            } catch (loadError) {
-                if (ignore) {
-                    return;
-                }
-
-                if (loadError.status === 401) {
-                    resetAuth(
-                        authToken,
-                        loadError.operation,
-                        loadError.message,
-                    );
-                    return;
-                }
-
-                setError({
-                    message: loadError.message,
-                    id: Date.now(),
-                });
-            } finally {
-                if (!ignore) {
-                    setIsLoading(false);
-                }
-            }
-        }
-
-        loadData();
-
-        return () => {
-            ignore = true;
-        };
-    }, [authToken, refreshAllData, resetAuth]);
 
     useEffect(() => {
         let ignore = false;
@@ -288,159 +140,19 @@ function App() {
         return () => {
             ignore = true;
         };
-    }, [activeSessionId, authToken, handleRemoteError]);
+    }, [activeSessionId, authToken, handleRemoteError, setData]);
 
-    useEffect(() => {
-        activeSessionIdRef.current = activeSessionId;
-    }, [activeSessionId]);
-
-    useEffect(() => {
-        if (!authToken) {
-            return undefined;
-        }
-
-        let unsubscribe = () => {};
-        let closed = false;
-        let channelGeneration = 0;
-
-        async function refreshAfterResume() {
-            const openSessionId = activeSessionIdRef.current;
-
-            await refreshAllData();
-
-            if (openSessionId) {
-                await refreshSessionGames(openSessionId);
-            }
-        }
-
-        async function bindRealtime() {
-            const generation = ++channelGeneration;
-
-            try {
-                const nextUnsubscribe = await subscribeToRemoteChanges(
-                    ({ table, payload }) => {
-                        if (closed || generation !== channelGeneration) {
-                            return;
-                        }
-
-                        if (table === "friends") {
-                            Promise.all([
-                                refreshFriends(),
-                                refreshStats(),
-                            ]).catch((remoteError) =>
-                                handleRemoteError(
-                                    remoteError,
-                                    setError,
-                                    authToken,
-                                ),
-                            );
-                        }
-
-                        if (table === "sessions") {
-                            refreshSessions().catch((remoteError) =>
-                                handleRemoteError(
-                                    remoteError,
-                                    setError,
-                                    authToken,
-                                ),
-                            );
-                        }
-
-                        if (table === "games") {
-                            const openSessionId = activeSessionIdRef.current;
-
-                            Promise.all([
-                                refreshSessions(),
-                                refreshStats(),
-                                shouldRefreshOpenSession(payload, openSessionId)
-                                    ? refreshSessionGames(openSessionId)
-                                    : Promise.resolve(),
-                            ]).catch((remoteError) =>
-                                handleRemoteError(
-                                    remoteError,
-                                    setError,
-                                    authToken,
-                                ),
-                            );
-                        }
-                    },
-                );
-
-                if (closed || generation !== channelGeneration) {
-                    nextUnsubscribe();
-                    return;
-                }
-
-                unsubscribe = nextUnsubscribe;
-            } catch (remoteError) {
-                handleRemoteError(remoteError, setError, authToken);
-            }
-        }
-
-        let reconnecting = Promise.resolve();
-        let reconnectQueued = false;
-
-        function reconnectRealtime() {
-            if (closed || reconnectQueued) {
-                return;
-            }
-
-            reconnectQueued = true;
-            reconnecting = reconnecting
-                .catch(() => {})
-                .then(async () => {
-                    if (closed) {
-                        return;
-                    }
-
-                    channelGeneration += 1;
-                    const previousUnsubscribe = unsubscribe;
-                    unsubscribe = () => {};
-                    previousUnsubscribe();
-
-                    try {
-                        await refreshAfterResume();
-                    } catch (remoteError) {
-                        handleRemoteError(remoteError, setError, authToken);
-                    }
-
-                    if (!closed) {
-                        await bindRealtime();
-                    }
-                })
-                .finally(() => {
-                    reconnectQueued = false;
-                });
-        }
-
-        function handleAppResume() {
-            if (document.visibilityState === "visible") {
-                reconnectRealtime();
-            }
-        }
-
-        bindRealtime();
-        document.addEventListener("visibilitychange", handleAppResume);
-        window.addEventListener("focus", handleAppResume);
-        window.addEventListener("online", handleAppResume);
-
-        return () => {
-            closed = true;
-            channelGeneration += 1;
-            document.removeEventListener("visibilitychange", handleAppResume);
-            window.removeEventListener("focus", handleAppResume);
-            window.removeEventListener("online", handleAppResume);
-            unsubscribe();
-        };
-    }, [
+    useRealtimeSync({
+        activeSessionId,
         authToken,
         handleRemoteError,
-        refreshFriends,
         refreshAllData,
+        refreshFriends,
         refreshSessionGames,
         refreshSessions,
         refreshStats,
-    ]);
+        setError,
+    });
 
     useEffect(() => {
         if (error?.message) {
@@ -478,58 +190,6 @@ function App() {
 
     const stats = useMemo(() => sortStats(data.stats), [data.stats]);
     const leaders = useMemo(() => createLeaders(stats), [stats]);
-
-    async function commit(action, updateData, errorHandler = setError) {
-        errorHandler(null);
-
-        try {
-            await action();
-            setData(updateData);
-            return true;
-        } catch (actionError) {
-            if (actionError.status === 401) {
-                resetAuth(
-                    authToken,
-                    actionError.operation,
-                    actionError.message,
-                );
-                return false;
-            }
-
-            errorHandler({
-                message: actionError.message,
-                id: Date.now(),
-            });
-            return false;
-        }
-    }
-
-    async function login(event) {
-        event.preventDefault();
-        const trimmedPassword = password.trim();
-
-        if (!trimmedPassword) {
-            setAuthError("비밀번호를 입력해 주세요.");
-            return;
-        }
-
-        setAuthError("");
-        setIsAuthenticating(true);
-        hasShownAuthResetToastRef.current = false;
-
-        try {
-            const authSession = await loginWithPassword(trimmedPassword);
-            await setStoredAuthToken(authSession);
-            setPassword("");
-            setIsLoading(true);
-            setCurrentAuthToken(authSession.accessToken);
-        } catch (loginError) {
-            clearAuthToken();
-            setAuthError(loginError.message);
-        } finally {
-            setIsAuthenticating(false);
-        }
-    }
 
     async function addFriend(event) {
         event.preventDefault();
@@ -660,19 +320,7 @@ function App() {
                     handleRemoteError(loadError, setError, authToken),
             );
         } catch (actionError) {
-            if (actionError.status === 401) {
-                resetAuth(
-                    authToken,
-                    actionError.operation,
-                    actionError.message,
-                );
-                return;
-            }
-
-            setError({
-                message: actionError.message,
-                id: Date.now(),
-            });
+            handleRemoteError(actionError, setError, authToken);
         } finally {
             isCreatingSessionRef.current = false;
             setIsCreatingSession(false);
@@ -765,31 +413,8 @@ function App() {
         }
 
         setIsLoadingMoreSessions(true);
-
         try {
-            const { sessions, hasMore, totalCount } = await loadSessions({
-                offset: data.sessions.length,
-            });
-            setData((current) => {
-                const sessionMap = new Map(
-                    current.sessions.map((session) => [session.id, session]),
-                );
-                sessions.forEach((session) => {
-                    sessionMap.set(session.id, session);
-                });
-
-                const nextSessions = uniqueById(
-                    Array.from(sessionMap.values()),
-                );
-                sessionLimitRef.current = nextSessions.length;
-
-                return {
-                    ...current,
-                    sessions: nextSessions,
-                    hasMoreSessions: hasMore,
-                    totalSessions: totalCount,
-                };
-            });
+            await loadMoreSessionsData();
         } catch (loadError) {
             handleRemoteError(loadError, setError, authToken);
         } finally {
