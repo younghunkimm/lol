@@ -1,7 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatMoney, getName } from "../../lib/utils";
 import { AnimatedList } from "../shared/motion";
-import { CloseIcon, PlusIcon, TrashIcon } from "../shared/ActionIcons";
+import {
+    CloseIcon,
+    PencilIcon,
+    PlusIcon,
+    TrashIcon,
+} from "../shared/ActionIcons";
 import { SettlementList } from "./SettlementList";
 import { Button, DangerButton, EmptyState, TextInput } from "../shared/ui";
 import { SessionLockControl } from "./SessionLockControl";
@@ -127,7 +132,7 @@ function GameRecordCard({
                 </div>
             </div>
             {game.note && (
-                <p className="mt-2 break-all text-sm font-semibold text-slate-400">
+                <p className="mt-2 break-keep [overflow-wrap:anywhere] text-sm font-semibold text-slate-400">
                     {game.note}
                 </p>
             )}
@@ -144,16 +149,29 @@ export function SessionModal({
     isGamesReady,
     gameDraft,
     isLockUpdating,
+    isTitleUpdating,
     onClose,
     onAddGame,
     onDeleteSession,
     onDeleteGame,
     onToggleLock,
+    onUpdateTitle,
     onToggleWinner,
     onToggleLoser,
     onGameDraftChange,
 }) {
     const isOpen = Boolean(activeSession);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [titleDraft, setTitleDraft] = useState("");
+    const isSavingTitleRef = useRef(false);
+    const titleInputRef = useRef(null);
+
+    useEffect(() => {
+        if (isEditingTitle) {
+            titleInputRef.current?.focus();
+            titleInputRef.current?.select();
+        }
+    }, [isEditingTitle]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -194,6 +212,49 @@ export function SessionModal({
         return null;
     }
 
+    function startTitleEditing() {
+        setTitleDraft(activeSession.title);
+        setIsEditingTitle(true);
+    }
+
+    function cancelTitleEditing() {
+        setTitleDraft(activeSession.title);
+        setIsEditingTitle(false);
+    }
+
+    async function saveTitle() {
+        if (isSavingTitleRef.current) {
+            return;
+        }
+
+        const title = titleDraft.trim();
+
+        if (!title) {
+            cancelTitleEditing();
+            return;
+        }
+
+        if (title === activeSession.title) {
+            setTitleDraft(title);
+            setIsEditingTitle(false);
+            return;
+        }
+
+        isSavingTitleRef.current = true;
+        let saved;
+
+        try {
+            saved = await onUpdateTitle(activeSession.id, title);
+        } finally {
+            isSavingTitleRef.current = false;
+        }
+
+        if (saved) {
+            setTitleDraft(title);
+            setIsEditingTitle(false);
+        }
+    }
+
     return (
         <div
             className="fixed inset-0 z-10 grid place-items-center bg-black/70 p-3 backdrop-blur-sm sm:p-6"
@@ -220,15 +281,55 @@ export function SessionModal({
                             isUpdating={isLockUpdating}
                             onToggle={() => onToggleLock(activeSession.id)}
                         />
-                        <Button aria-label="닫기" type="button" onClick={onClose} title="닫기">
+                        <Button
+                            aria-label="닫기"
+                            type="button"
+                            onClick={onClose}
+                            title="닫기"
+                        >
                             <CloseIcon />
                         </Button>
                     </div>
                 </div>
                 <div className="mt-3 min-w-0">
-                    <h2 className="text-2xl font-black tracking-tight text-slate-50">
-                        {activeSession.title}
-                    </h2>
+                    {isEditingTitle ? (
+                        <TextInput
+                            aria-label="세션 제목"
+                            className="h-10 min-w-0 max-w-xl border-white/15 bg-white/[0.04] py-1 text-2xl font-black tracking-tight"
+                            disabled={isTitleUpdating}
+                            inputRef={titleInputRef}
+                            value={titleDraft}
+                            onBlur={saveTitle}
+                            onChange={(event) =>
+                                setTitleDraft(event.target.value)
+                            }
+                            onKeyDown={(event) => {
+                                if (event.key === "Enter") {
+                                    event.preventDefault();
+                                    event.currentTarget.blur();
+                                }
+
+                                if (event.key === "Escape") {
+                                    event.preventDefault();
+                                    cancelTitleEditing();
+                                }
+                            }}
+                        />
+                    ) : (
+                        <h2 className="break-keep [overflow-wrap:anywhere] text-2xl font-black tracking-tight text-slate-50">
+                            <span>{activeSession.title}</span>
+                            <button
+                                aria-label="세션 제목 수정"
+                                className="ml-1 inline-flex align-middle items-center justify-center rounded-lg p-2 text-slate-400 transition hover:bg-white/[0.06] hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                type="button"
+                                disabled={isTitleUpdating}
+                                title="세션 제목 수정"
+                                onClick={startTitleEditing}
+                            >
+                                <PencilIcon className="size-4" />
+                            </button>
+                        </h2>
+                    )}
                 </div>
 
                 <div className="my-4 flex flex-wrap gap-2">
@@ -274,15 +375,17 @@ export function SessionModal({
                             }
                             placeholder="메모"
                         />
-                        <Button aria-label="승패 기록 추가" className="w-full" type="submit" title="승패 기록 추가">
+                        <Button
+                            aria-label="승패 기록 추가"
+                            className="w-full"
+                            type="submit"
+                            title="승패 기록 추가"
+                        >
                             <PlusIcon />
                         </Button>
                     </form>
 
-                    <SettlementPanel
-                        rows={settlements}
-                        ready={isGamesReady}
-                    />
+                    <SettlementPanel rows={settlements} ready={isGamesReady} />
                 </div>
 
                 <div className="mt-4">
@@ -296,7 +399,7 @@ export function SessionModal({
                                 <GameRecordCard
                                     game={game}
                                     gameNumber={games.length - index}
-                                index={index}
+                                    index={index}
                                     friends={friends}
                                     isLocked={activeSession.isLocked}
                                     onDeleteGame={onDeleteGame}

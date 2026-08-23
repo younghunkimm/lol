@@ -18,6 +18,7 @@ import {
     insertSession,
     loadSessionGames,
     updateSessionLock as updateRemoteSessionLock,
+    updateSessionTitle as updateRemoteSessionTitle,
 } from "./services/dataClient";
 import { useAuth } from "./hooks/useAuth";
 import { useDashboardData } from "./hooks/useDashboardData";
@@ -97,6 +98,7 @@ function App() {
     const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
     const [isSessionLockUpdating, setIsSessionLockUpdating] = useState(false);
+    const [isSessionTitleUpdating, setIsSessionTitleUpdating] = useState(false);
     const [friendName, setFriendName] = useState("");
     const [sessionDraft, setSessionDraft] = useState({
         title: formatSessionTitle(),
@@ -407,6 +409,44 @@ function App() {
         }
     }
 
+    async function updateSessionTitle(sessionId, nextTitle) {
+        if (isSessionTitleUpdating) {
+            return false;
+        }
+
+        const title = nextTitle.trim();
+        const session = data.sessions.find((item) => item.id === sessionId);
+
+        if (!session || !title || title === session.title) {
+            return Boolean(session && title);
+        }
+
+        setIsSessionTitleUpdating(true);
+
+        try {
+            const saved = await commit(
+                () => updateRemoteSessionTitle(authToken, sessionId, title),
+                (current) => ({
+                    ...current,
+                    sessions: current.sessions.map((item) =>
+                        item.id === sessionId ? { ...item, title } : item,
+                    ),
+                }),
+                setModalError,
+            );
+
+            if (saved) {
+                refreshSessions().catch((loadError) =>
+                    handleRemoteError(loadError, setModalError, authToken),
+                );
+            }
+
+            return saved;
+        } finally {
+            setIsSessionTitleUpdating(false);
+        }
+    }
+
     async function loadMoreSessions() {
         if (isLoadingMoreSessions || !data.hasMoreSessions) {
             return;
@@ -647,11 +687,13 @@ function App() {
                 isGamesReady={!isSessionGamesLoading}
                 gameDraft={gameDraft}
                 isLockUpdating={isSessionLockUpdating}
+                isTitleUpdating={isSessionTitleUpdating}
                 onClose={closeModal}
                 onAddGame={addGame}
                 onDeleteSession={deleteSession}
                 onDeleteGame={deleteGame}
                 onToggleLock={updateSessionLock}
+                onUpdateTitle={updateSessionTitle}
                 onToggleWinner={(friendId) =>
                     toggleGameFriend("winnerIds", friendId)
                 }

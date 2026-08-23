@@ -446,6 +446,19 @@ export async function updateSessionLock(_token, sessionId, isLocked) {
     return fromSessionRow(data);
 }
 
+export async function updateSessionTitle(_token, sessionId, title) {
+    const { data, error } = await (await requireSession())
+        .from("sessions")
+        .update({ title })
+        .eq("id", sessionId)
+        .select("*")
+        .single();
+
+    throwIfError("세션 제목 변경", error);
+
+    return fromSessionRow(data);
+}
+
 export async function insertGame(_token, game) {
     const { error } = await (await requireSession())
         .from("games")

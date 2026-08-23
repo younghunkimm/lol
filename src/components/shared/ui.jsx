@@ -24,8 +24,14 @@ export function DangerButton({ className = "", children, ...props }) {
     );
 }
 
-export function TextInput({ className = "", ...props }) {
-    return <input className={`${inputClass} ${className}`.trim()} {...props} />;
+export function TextInput({ className = "", inputRef, ...props }) {
+    return (
+        <input
+            ref={inputRef}
+            className={`${inputClass} ${className}`.trim()}
+            {...props}
+        />
+    );
 }
 
 export function Panel({ className = "", children }) {
