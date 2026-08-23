@@ -32,7 +32,7 @@ export function FriendManager({
                     추가
                 </Button>
             </form>
-            <div className="grid min-h-30 flex-[1_0_0] grid-cols-2 gap-1.5 overflow-y-auto pr-1">
+            <div className="grid min-h-25 flex-[1_0_0] grid-cols-2 gap-1.5 overflow-y-auto pr-1">
                 <AnimatedList
                     className="flex min-w-0 items-center justify-between gap-2 rounded-xl bg-white/[0.04] px-3 py-1.5"
                     getKey={(friend) => friend.id}
