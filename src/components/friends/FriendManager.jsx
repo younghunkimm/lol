@@ -1,6 +1,13 @@
 import { AnimatedList } from "../shared/motion";
 import { PlusIcon, TrashIcon } from "../shared/ActionIcons";
-import { Button, DangerButton, Panel, TextInput } from "../shared/ui";
+import {
+    Button,
+    CardHeader,
+    DangerButton,
+    HeaderCount,
+    Panel,
+    TextInput,
+} from "../shared/ui";
 
 export function FriendManager({
     friends,
@@ -11,14 +18,10 @@ export function FriendManager({
 }) {
     return (
         <Panel className="flex flex-col gap-3 p-3 md:p-4">
-            <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-black tracking-tight">
-                    프로게이머 등록
-                </h2>
-                <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-black text-slate-300">
-                    {friends.length}명
-                </span>
-            </div>
+            <CardHeader
+                right={<HeaderCount suffix="명" value={friends.length} />}
+                title="프로게이머 등록"
+            />
             <form
                 className="grid grid-cols-[minmax(0,1fr)_auto] gap-2"
                 onSubmit={onSubmit}

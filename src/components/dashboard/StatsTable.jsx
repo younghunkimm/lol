@@ -1,18 +1,19 @@
 import { formatMoney, getNetClass, getWinRateClass } from "../../lib/utils";
 import { AnimatedList, AnimatedNumber } from "../shared/motion";
-import { EmptyState, Panel } from "../shared/ui";
+import { CardHeader, EmptyState, Panel } from "../shared/ui";
 
 export function StatsTable({ stats }) {
     return (
         <Panel>
-            <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-black tracking-tight">
-                    개인별 승률
-                </h2>
-                <span className="text-sm font-extrabold text-slate-400">
-                    전체 세션 기준
-                </span>
-            </div>
+            <CardHeader
+                className="mb-4"
+                right={
+                    <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-black text-slate-300">
+                        전체 세션 기준
+                    </span>
+                }
+                title="개인별 승률"
+            />
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] border-collapse text-left">
                     <thead>

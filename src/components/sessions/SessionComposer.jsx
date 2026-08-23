@@ -1,4 +1,4 @@
-import { Button, Panel, TextInput } from "../shared/ui";
+import { Button, CardHeader, Panel, TextInput } from "../shared/ui";
 import { LoadingIcon, PlusIcon } from "../shared/ActionIcons";
 
 export function SessionComposer({
@@ -11,9 +11,7 @@ export function SessionComposer({
 }) {
     return (
         <Panel>
-            <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-black tracking-tight">세션 생성</h2>
-            </div>
+            <CardHeader className="mb-4" title="세션 생성" />
             <form className="grid gap-3" onSubmit={onSubmit}>
                 <label className="grid gap-1.5 text-sm font-extrabold text-slate-300">
                     제목

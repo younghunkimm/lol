@@ -36,6 +36,29 @@ export function Panel({ className = "", children }) {
     );
 }
 
+export function CardHeader({ className = "", title, right }) {
+    return (
+        <div
+            className={`flex items-center justify-between gap-3 ${className}`.trim()}
+        >
+            <h2 className="text-lg font-black tracking-tight">{title}</h2>
+            {right}
+        </div>
+    );
+}
+
+export function HeaderCount({ prefix = "", value, suffix }) {
+    return (
+        <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-black text-slate-300">
+            {prefix}
+            <strong>
+                {value}
+                {suffix}
+            </strong>
+        </span>
+    );
+}
+
 export function Alert({ children }) {
     if (!children) {
         return null;

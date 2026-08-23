@@ -1,7 +1,7 @@
 import { AnimatedList } from "../shared/motion";
 import { LoadingIcon, MoreIcon } from "../shared/ActionIcons";
 import { formatMoney, getName, sortByCreatedAt } from "../../lib/utils";
-import { Button, EmptyState, Panel } from "../shared/ui";
+import { Button, CardHeader, EmptyState, HeaderCount, Panel } from "../shared/ui";
 import { SessionLockControl } from "./SessionLockControl";
 
 export function SessionList({
@@ -16,12 +16,17 @@ export function SessionList({
 }) {
     return (
         <Panel className="mb-4">
-            <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-xl font-black tracking-tight">세션 목록</h2>
-                <span className="text-sm font-extrabold text-slate-400">
-                    총 {totalSessions}개
-                </span>
-            </div>
+            <CardHeader
+                className="mb-4"
+                right={
+                    <HeaderCount
+                        prefix="총 "
+                        suffix="건"
+                        value={totalSessions}
+                    />
+                }
+                title="세션 목록"
+            />
             <div className="grid gap-3">
                 <AnimatedList
                     as="button"
