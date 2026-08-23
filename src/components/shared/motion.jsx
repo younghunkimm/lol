@@ -5,6 +5,7 @@ export function AnimatedList({
     as = "div",
     className,
     getKey,
+    itemProps,
     items,
     ready = true,
     renderItem,
@@ -54,6 +55,7 @@ export function AnimatedList({
                     layout={canAnimate}
                     layoutDependency={layoutDependency}
                     transition={{ duration: 0.28, ease: "easeOut" }}
+                    {...(itemProps ? itemProps(item, index) : {})}
                 >
                     {renderItem(item, index)}
                 </MotionItem>

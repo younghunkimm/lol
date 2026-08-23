@@ -1,5 +1,5 @@
 import { AnimatedList } from "../shared/motion";
-import { DetailIcon, LoadingIcon, MoreIcon } from "../shared/ActionIcons";
+import { LoadingIcon, MoreIcon } from "../shared/ActionIcons";
 import { formatMoney, getName, sortByCreatedAt } from "../../lib/utils";
 import { Button, EmptyState, Panel } from "../shared/ui";
 import { SessionLockControl } from "./SessionLockControl";
@@ -10,6 +10,7 @@ export function SessionList({
     totalSessions,
     hasMore,
     isLoadingMore,
+    activeSessionId,
     onOpenSession,
     onLoadMore,
 }) {
@@ -23,9 +24,21 @@ export function SessionList({
             </div>
             <div className="grid gap-3">
                 <AnimatedList
-                    as="article"
-                    className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 shadow-sm shadow-black/20 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center"
+                    as="button"
+                    className={(session) =>
+                        `grid w-full gap-3 rounded-2xl border p-4 text-left shadow-sm transition sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center ${
+                            session.id === activeSessionId
+                                ? "border-cyan-400 bg-cyan-400/10 shadow-cyan-400/20 ring-2 ring-cyan-400/30"
+                                : "border-white/10 bg-white/[0.03] shadow-black/20 hover:border-cyan-400/50 hover:bg-cyan-400/[0.06]"
+                        }`
+                    }
                     getKey={(session) => session.id}
+                    itemProps={(session) => ({
+                        "aria-label": `${session.title} 상세보기`,
+                        "aria-pressed": session.id === activeSessionId,
+                        type: "button",
+                        onClick: () => onOpenSession(session.id),
+                    })}
                     items={sortByCreatedAt(sessions)}
                     renderItem={(session) => (
                         <>
@@ -40,30 +53,20 @@ export function SessionList({
                                         )
                                         .join(", ")}
                                 </p>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 items-center">
-                            <SessionLockControl
-                                className="size-5"
-                                isLocked={session.isLocked}
-                                variant="icon"
-                            />
-                            <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-xs font-black text-violet-300">
-                                {formatMoney(session.price)} / 판
-                            </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 items-center">
+                                <SessionLockControl
+                                    className="size-5"
+                                    isLocked={session.isLocked}
+                                    variant="icon"
+                                />
+                                <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-xs font-black text-violet-300">
+                                    {formatMoney(session.price)} / 판
+                                </span>
                                 <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-black text-slate-300">
                                     {session.gameCount ?? 0}게임
                                 </span>
                             </div>
-                        <div className="flex">
-                            <Button
-                                aria-label={`${session.title} 상세보기`}
-                                type="button"
-                                onClick={() => onOpenSession(session.id)}
-                                title={`${session.title} 상세보기`}
-                            >
-                                <DetailIcon />
-                            </Button>
-                        </div>
                         </>
                     )}
                 />
@@ -73,11 +76,15 @@ export function SessionList({
                 {hasMore ? (
                     <Button
                         className="justify-self-center px-6"
-                        aria-label={isLoadingMore ? "세션 불러오는 중" : "세션 더보기"}
+                        aria-label={
+                            isLoadingMore ? "세션 불러오는 중" : "세션 더보기"
+                        }
                         type="button"
                         disabled={isLoadingMore}
                         onClick={onLoadMore}
-                        title={isLoadingMore ? "세션 불러오는 중" : "세션 더보기"}
+                        title={
+                            isLoadingMore ? "세션 불러오는 중" : "세션 더보기"
+                        }
                     >
                         {isLoadingMore ? <LoadingIcon /> : <MoreIcon />}
                     </Button>

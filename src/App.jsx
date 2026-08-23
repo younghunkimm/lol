@@ -629,6 +629,7 @@ function App() {
                         totalSessions={data.totalSessions}
                         hasMore={data.hasMoreSessions}
                         isLoadingMore={isLoadingMoreSessions}
+                        activeSessionId={activeSessionId}
                         onOpenSession={openSession}
                         onLoadMore={loadMoreSessions}
                     />
