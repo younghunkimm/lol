@@ -1,4 +1,9 @@
-import { formatMoney, getNetClass, getWinRateClass } from "../../lib/utils";
+import {
+    formatMoney,
+    formatSignedMoney,
+    getNetClass,
+    getWinRateClass,
+} from "../../lib/utils";
 import { AnimatedList, AnimatedNumber } from "../shared/motion";
 import { CardHeader, EmptyState, Panel } from "../shared/ui";
 
@@ -47,7 +52,7 @@ export function StatsTable({ stats }) {
                                     >
                                         <AnimatedNumber
                                             animateInitial
-                                            format={formatMoney}
+                                            format={formatSignedMoney}
                                             value={row.net}
                                         />
                                     </td>

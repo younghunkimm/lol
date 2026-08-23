@@ -1,11 +1,5 @@
-import { formatMoney } from "../../lib/utils";
+import { formatSignedMoney } from "../../lib/utils";
 import { AnimatedNumber, AnimatedText } from "../shared/motion";
-
-function formatMetric(value, format) {
-    if (format === "rate") return `${value}%`;
-    if (format === "positiveMoney") return `+${formatMoney(value)}`;
-    return formatMoney(value);
-}
 
 export function LeaderSummary({ leaders }) {
     return (
@@ -38,8 +32,10 @@ export function LeaderSummary({ leaders }) {
                         >
                             <AnimatedNumber
                                 animateInitial
-                                format={(value) =>
-                                    formatMetric(value, leader.metricFormat)
+                                format={
+                                    leader.metricFormat === "rate"
+                                        ? (value) => `${value}%`
+                                        : formatSignedMoney
                                 }
                                 value={leader.metricValue}
                             />

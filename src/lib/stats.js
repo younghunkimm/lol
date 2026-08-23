@@ -133,7 +133,7 @@ export function createLeaders(stats) {
         {
             label: `수금왕`,
             value: formatNames(receivedLeaders),
-            metricFormat: "positiveMoney",
+            metricFormat: "money",
             metricValue: receivedLeader.net,
             textColor: "text-emerald-500",
             bgColor: "bg-emerald-400/20",
