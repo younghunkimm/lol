@@ -28,37 +28,38 @@ export function SessionList({
                     items={sortByCreatedAt(sessions)}
                     renderItem={(session) => (
                         <>
-                        <div className="min-w-0">
-                            <h3 className="truncate text-base font-black text-slate-50">
-                                {session.title}
-                            </h3>
-                            <p className="mt-1 truncate text-sm font-semibold text-slate-400">
-                                {session.friendIds
-                                    .map((friendId) =>
-                                        getName(friends, friendId),
-                                    )
-                                    .join(", ")}
-                            </p>
+                            <div className="min-w-0">
+                                <h3 className="truncate text-base font-black text-slate-50">
+                                    {session.title}
+                                </h3>
+                                <p className="mt-1 truncate text-sm font-semibold text-slate-400">
+                                    {session.friendIds
+                                        .map((friendId) =>
+                                            getName(friends, friendId),
+                                        )
+                                        .join(", ")}
+                                </p>
                         </div>
                         <div className="flex flex-wrap gap-1.5 items-center">
+                            <SessionLockControl
+                                className="size-5"
+                                isLocked={session.isLocked}
+                                variant="icon"
+                            />
                             <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-xs font-black text-violet-300">
                                 {formatMoney(session.price)} / 판
                             </span>
-                            <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-black text-slate-300">
-                                {session.gameCount ?? 0}게임
-                            </span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 sm:flex">
+                                <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-black text-slate-300">
+                                    {session.gameCount ?? 0}게임
+                                </span>
+                            </div>
+                        <div className="flex">
                             <Button
                                 type="button"
                                 onClick={() => onOpenSession(session.id)}
                             >
                                 상세보기
                             </Button>
-                            <SessionLockControl
-                                className="w-[60px] px-4 py-2.5"
-                                isLocked={session.isLocked}
-                            />
                         </div>
                         </>
                     )}
