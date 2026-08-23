@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_PRICE } from "./constants";
-import { FriendManager } from "./components/FriendManager";
-import { LeaderSummary } from "./components/LeaderSummary";
-import { SessionComposer } from "./components/SessionComposer";
-import { SessionList } from "./components/SessionList";
-import { SessionModal } from "./components/SessionModal";
-import { StatsTable } from "./components/StatsTable";
-import { Button, Panel, TextInput } from "./components/ui";
-import { confirmAction, showToast } from "./alerts";
+import { FriendManager } from "./components/friends/FriendManager";
+import { LeaderSummary } from "./components/dashboard/LeaderSummary";
+import { SessionComposer } from "./components/sessions/SessionComposer";
+import { SessionList } from "./components/sessions/SessionList";
+import { SessionModal } from "./components/sessions/SessionModal";
+import { StatsTable } from "./components/dashboard/StatsTable";
+import { Button, Panel, TextInput } from "./components/shared/ui";
+import { confirmAction, showToast } from "./lib/alerts";
 import {
     deleteFriend as deleteRemoteFriend,
     deleteGame as deleteRemoteGame,
@@ -18,18 +18,18 @@ import {
     insertSession,
     loadSessionGames,
     updateSessionLock as updateRemoteSessionLock,
-} from "./dataClient";
+} from "./services/dataClient";
 import { useAuth } from "./hooks/useAuth";
 import { useDashboardData } from "./hooks/useDashboardData";
 import { useRealtimeSync } from "./hooks/useRealtimeSync";
-import { createLeaders, createSessionSettlements } from "./stats";
+import { createLeaders, createSessionSettlements } from "./lib/stats";
 import {
     createId,
     formatSessionTitle,
     getName,
     nowIso,
     sortByCreatedAt,
-} from "./utils";
+} from "./lib/utils";
 
 function prependSessionOnce(sessions, session) {
     if (sessions.some((item) => item.id === session.id)) {

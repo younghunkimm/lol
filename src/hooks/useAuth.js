@@ -1,11 +1,11 @@
 import { useCallback, useRef, useState } from "react";
-import { showAlert } from "../alerts";
+import { showAlert } from "../lib/alerts";
 import {
     clearAuthToken,
     getAuthToken,
     loginWithPassword,
     setStoredAuthToken,
-} from "../dataClient";
+} from "../services/dataClient";
 
 export function useAuth() {
     const [authToken, setAuthToken] = useState(() => getAuthToken());

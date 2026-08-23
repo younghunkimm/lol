@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { formatMoney, getName } from "../utils";
-import { AnimatedList } from "./motion";
+import { formatMoney, getName } from "../../lib/utils";
+import { AnimatedList } from "../shared/motion";
 import { SettlementList } from "./SettlementList";
-import { Button, DangerButton, EmptyState, TextInput } from "./ui";
+import { Button, DangerButton, EmptyState, TextInput } from "../shared/ui";
 import { SessionLockControl } from "./SessionLockControl";
 
 function ParticipantToggleGroup({

@@ -1,6 +1,6 @@
-import { AnimatedList } from "./motion";
-import { formatMoney, getName, sortByCreatedAt } from "../utils";
-import { Button, EmptyState, Panel } from "./ui";
+import { AnimatedList } from "../shared/motion";
+import { formatMoney, getName, sortByCreatedAt } from "../../lib/utils";
+import { Button, EmptyState, Panel } from "../shared/ui";
 import { SessionLockControl } from "./SessionLockControl";
 
 export function SessionList({

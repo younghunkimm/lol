@@ -1,6 +1,6 @@
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { formatSignedMoney, getSignedMoneyClass } from "../utils";
-import { AnimatedNumber } from "./motion";
+import { formatSignedMoney, getSignedMoneyClass } from "../../lib/utils";
+import { AnimatedNumber } from "../shared/motion";
 
 const rowClassName =
     "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-white/5 bg-white/[0.04] px-3 py-2.5";

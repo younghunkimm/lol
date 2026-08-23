@@ -1,4 +1,4 @@
-import { Button, Panel, TextInput } from "./ui";
+import { Button, Panel, TextInput } from "../shared/ui";
 
 export function SessionComposer({
     friends,

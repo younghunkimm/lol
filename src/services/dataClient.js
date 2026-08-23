@@ -3,7 +3,7 @@ import {
     AUTH_TOKEN_KEY,
     SESSION_PAGE_SIZE,
     SUPABASE_URL,
-} from "./constants";
+} from "../constants";
 import { supabase } from "./supabaseClient";
 
 export function getAuthToken() {

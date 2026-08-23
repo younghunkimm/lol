@@ -1,6 +1,6 @@
-import { formatMoney, getNetClass, getWinRateClass } from "../utils";
-import { AnimatedList, AnimatedNumber } from "./motion";
-import { EmptyState, Panel } from "./ui";
+import { formatMoney, getNetClass, getWinRateClass } from "../../lib/utils";
+import { AnimatedList, AnimatedNumber } from "../shared/motion";
+import { EmptyState, Panel } from "../shared/ui";
 
 export function StatsTable({ stats }) {
     return (

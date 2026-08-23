@@ -1,5 +1,5 @@
-import { AnimatedList } from "./motion";
-import { Button, DangerButton, Panel, TextInput } from "./ui";
+import { AnimatedList } from "../shared/motion";
+import { Button, DangerButton, Panel, TextInput } from "../shared/ui";
 
 export function FriendManager({
     friends,

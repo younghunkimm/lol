@@ -1,5 +1,5 @@
-import { formatMoney } from "../utils";
-import { AnimatedNumber, AnimatedText } from "./motion";
+import { formatMoney } from "../../lib/utils";
+import { AnimatedNumber, AnimatedText } from "../shared/motion";
 
 function formatMetric(value, format) {
     if (format === "rate") return `${value}%`;

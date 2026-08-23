@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { subscribeToRemoteChanges } from "../dataClient";
+import { subscribeToRemoteChanges } from "../services/dataClient";
 
 function shouldRefreshOpenSession(payload, activeSessionId) {
     return Boolean(

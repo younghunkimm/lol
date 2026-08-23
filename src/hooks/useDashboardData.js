@@ -6,7 +6,7 @@ import {
     loadSessionGames,
     loadSessions,
     loadStats,
-} from "../dataClient";
+} from "../services/dataClient";
 
 function uniqueById(items) {
     return Array.from(new Map(items.map((item) => [item.id, item])).values());

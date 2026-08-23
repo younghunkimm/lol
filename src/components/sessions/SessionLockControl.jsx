@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "motion/react";
-import { LockIcon } from "./LockIcon";
+import { LockIcon } from "../shared/LockIcon";
 
 export function SessionLockControl({
     isLocked,
