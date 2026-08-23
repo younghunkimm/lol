@@ -7,6 +7,7 @@ import { SessionList } from "./components/sessions/SessionList";
 import { SessionModal } from "./components/sessions/SessionModal";
 import { StatsTable } from "./components/dashboard/StatsTable";
 import { Button, Panel, TextInput } from "./components/shared/ui";
+import { LoadingIcon } from "./components/shared/ActionIcons";
 import { confirmAction, showToast } from "./lib/alerts";
 import {
     deleteFriend as deleteRemoteFriend,
@@ -632,7 +633,14 @@ function App() {
                                 </p>
                             ) : null}
                             <Button type="submit" disabled={isAuthenticating}>
-                                {isAuthenticating ? "확인 중" : "입장"}
+                                {isAuthenticating ? (
+                                    <LoadingIcon
+                                        className="size-4"
+                                        aria-label="비밀번호 확인 중"
+                                    />
+                                ) : (
+                                    "입장"
+                                )}
                             </Button>
                         </form>
                     </Panel>
