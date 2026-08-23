@@ -317,10 +317,9 @@ export function SessionModal({
                         />
                     ) : (
                         <h2 className="break-keep [overflow-wrap:anywhere] text-2xl font-black tracking-tight text-slate-50">
-                            <span>{activeSession.title}</span>
                             <button
                                 aria-label="세션 제목 수정"
-                                className="ml-1 inline-flex align-middle items-center justify-center rounded-lg p-2 text-slate-400 transition hover:bg-white/[0.06] hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                                className="mr-1 inline-flex align-middle items-center justify-center rounded-lg p-2 text-slate-400 transition hover:bg-white/[0.06] hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                                 type="button"
                                 disabled={isTitleUpdating}
                                 title="세션 제목 수정"
@@ -328,6 +327,7 @@ export function SessionModal({
                             >
                                 <PencilIcon className="size-4" />
                             </button>
+                            <span>{activeSession.title}</span>
                         </h2>
                     )}
                 </div>
