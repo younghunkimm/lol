@@ -65,6 +65,17 @@ export function HeaderCount({ prefix = "", value, suffix }) {
     );
 }
 
+export function Badge({ className = "", children, ...props }) {
+    return (
+        <span
+            className={`rounded-full text-xs font-black ${className}`.trim()}
+            {...props}
+        >
+            {children}
+        </span>
+    );
+}
+
 export function Alert({ children }) {
     if (!children) {
         return null;

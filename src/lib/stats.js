@@ -1,4 +1,9 @@
 import { getGameSettlement } from "./utils";
+import {
+    getOpponentInhouseTeam,
+    INHOUSE_TEAM_LABELS,
+    INHOUSE_TEAMS,
+} from "../constants";
 
 export function createStats({ friends, games, sessions }) {
     const rows = friends.map((friend) => ({
@@ -164,6 +169,41 @@ export function createLeaders(stats) {
 export function createSessionSettlements({ participants, games, session }) {
     if (!session) {
         return [];
+    }
+
+    if (session.isInhouse) {
+        const teamRows = INHOUSE_TEAMS.map((team) => ({
+            id: `team-${team}`,
+            name: INHOUSE_TEAM_LABELS[team],
+            team,
+            wins: 0,
+            losses: 0,
+            paid: 0,
+            received: 0,
+        }));
+        const teamMap = new Map(teamRows.map((row) => [row.team, row]));
+
+        games.forEach((game) => {
+            if (!INHOUSE_TEAMS.includes(game.winnerTeam)) {
+                return;
+            }
+
+            const loserTeam = getOpponentInhouseTeam(game.winnerTeam);
+            const settlement = getGameSettlement(game, session);
+            const winners = teamMap.get(game.winnerTeam);
+            const losers = teamMap.get(loserTeam);
+
+            winners.wins += 1;
+            winners.received +=
+                settlement.receiverAmount * game.winnerIds.length;
+            losers.losses += 1;
+            losers.paid += settlement.payerAmount * game.loserIds.length;
+        });
+
+        return teamRows.map((row) => ({
+            ...row,
+            net: row.received - row.paid,
+        }));
     }
 
     const rows = participants.map((friend) => ({

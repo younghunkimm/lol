@@ -32,13 +32,18 @@ export function FriendManager({
                     onChange={(event) => onNameChange(event.target.value)}
                     placeholder="이름 입력"
                 />
-                <Button aria-label="프로게이머 추가" className="px-3 py-2" title="프로게이머 추가" type="submit">
+                <Button
+                    aria-label="프로게이머 추가"
+                    className="px-3 py-2"
+                    title="프로게이머 추가"
+                    type="submit"
+                >
                     <PlusIcon />
                 </Button>
             </form>
-            <div className="grid min-h-25 flex-[1_0_0] grid-cols-2 gap-1.5 overflow-y-auto pr-1">
+            <div className="grid content-start min-h-30 flex-[1_0_0] grid-cols-2 gap-1.5 overflow-y-auto pr-1">
                 <AnimatedList
-                    className="flex min-w-0 items-center justify-between gap-2 rounded-xl bg-white/[0.04] px-3 py-1.5"
+                    className="flex min-w-0 items-center justify-between gap-2 rounded-xl bg-white/[0.04] px-3 py-2"
                     getKey={(friend) => friend.id}
                     items={friends}
                     renderItem={(friend) => (

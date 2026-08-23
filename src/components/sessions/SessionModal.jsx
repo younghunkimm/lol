@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { formatMoney, getName } from "../../lib/utils";
+import {
+    getOpponentInhouseTeam,
+    INHOUSE_TEAM,
+    INHOUSE_TEAM_LABELS,
+    INHOUSE_TEAMS,
+} from "../../constants";
 import { AnimatedList } from "../shared/motion";
 import {
     CloseIcon,
@@ -9,7 +15,15 @@ import {
     TrashIcon,
 } from "../shared/ActionIcons";
 import { SettlementList } from "./SettlementList";
-import { Button, DangerButton, EmptyState, TextInput } from "../shared/ui";
+import { InhouseSettlementPanel } from "./InhouseSettlementPanel";
+import { SessionModeBadge } from "./SessionModeBadge";
+import {
+    Badge,
+    Button,
+    DangerButton,
+    EmptyState,
+    TextInput,
+} from "../shared/ui";
 import { SessionLockControl } from "./SessionLockControl";
 
 function ParticipantToggleGroup({
@@ -91,8 +105,10 @@ function GameRecordCard({
     index,
     friends,
     isLocked,
+    isInhouse,
     onDeleteGame,
 }) {
+    const winnerTeam = game.winnerTeam;
     return (
         <article
             className={`rounded-2xl border bg-[#151a23] p-4 ${index === 0 ? "border-cyan-400/60" : "border-white/10"}`}
@@ -100,8 +116,18 @@ function GameRecordCard({
         >
             <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
                 <div className="min-w-0 rounded-xl border border-cyan-400/10 bg-cyan-400/10 px-3 py-3 text-left">
-                    <span className="block text-xs font-black text-cyan-300">
-                        승자
+                    <span
+                        className={`block text-xs font-black ${
+                            isInhouse
+                                ? winnerTeam === INHOUSE_TEAM.A
+                                    ? "text-indigo-300"
+                                    : "text-lime-300"
+                                : "text-cyan-300"
+                        }`}
+                    >
+                        {isInhouse
+                            ? `${INHOUSE_TEAM_LABELS[winnerTeam]} 승리`
+                            : "승자"}
                     </span>
                     <PlayerNameList ids={game.winnerIds} friends={friends} />
                 </div>
@@ -122,8 +148,18 @@ function GameRecordCard({
                     ) : null}
                 </div>
                 <div className="min-w-0 rounded-xl border border-rose-400/10 bg-rose-400/10 px-3 py-3 text-right">
-                    <span className="block text-xs font-black text-rose-300">
-                        패자
+                    <span
+                        className={`block text-xs font-black ${
+                            isInhouse
+                                ? winnerTeam === INHOUSE_TEAM.A
+                                    ? "text-lime-300"
+                                    : "text-indigo-300"
+                                : "text-rose-300"
+                        }`}
+                    >
+                        {isInhouse
+                            ? `${INHOUSE_TEAM_LABELS[getOpponentInhouseTeam(winnerTeam)]} 패배`
+                            : "패자"}
                     </span>
                     <PlayerNameList
                         ids={game.loserIds}
@@ -159,6 +195,7 @@ export function SessionModal({
     onUpdateTitle,
     onToggleWinner,
     onToggleLoser,
+    onSelectWinningTeam,
     onGameDraftChange,
 }) {
     const isOpen = Boolean(activeSession);
@@ -267,8 +304,8 @@ export function SessionModal({
                     <motion.section
                         animate={{ opacity: 1, scale: 1 }}
                         className="max-h-[calc(100svh-2rem)] w-full max-w-6xl overflow-auto rounded-3xl border border-white/10 bg-[#111722] p-4 shadow-2xl shadow-black/40 sm:p-6"
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        initial={{ opacity: 0, scale: 0.5 }}
+                        exit={{ opacity: 0, scale: 0.88 }}
+                        initial={{ opacity: 0, scale: 0.88 }}
                         style={{ transformOrigin: "center" }}
                         transition={{ duration: 0.24, ease: "easeOut" }}
                     >
@@ -347,42 +384,60 @@ export function SessionModal({
                         </div>
 
                         <div className="my-4 flex flex-wrap gap-2">
-                            <span className="rounded-full bg-violet-400/10 px-3 py-1.5 text-xs font-black text-violet-300">
-                                {formatMoney(activeSession.price)} / 판
-                            </span>
-                            <span className="rounded-full bg-white/[0.06] px-3 py-1.5 text-xs font-black text-slate-300">
-                                {participants
-                                    .map((friend) => friend.name)
-                                    .join(", ")}
-                            </span>
+                            <SessionModeBadge
+                                className="px-3 py-1.5"
+                                session={activeSession}
+                            />
+                            <Badge className="bg-violet-400/10 px-3 py-1.5 text-violet-300">
+                                {formatMoney(activeSession.price)} 빵
+                            </Badge>
                         </div>
 
-                        <div className="grid gap-3 lg:grid-cols-2">
+                        <div className="grid items-start gap-3 lg:grid-cols-2">
                             <form
-                                className="grid gap-3 rounded-2xl border border-white/10 bg-[#151a23] p-4"
+                                className="grid content-start gap-3 rounded-2xl border border-white/10 bg-[#151a23] p-4"
                                 onSubmit={onAddGame}
                             >
                                 <h3 className="text-lg font-black">
                                     게임 승패 기록
                                 </h3>
-                                <ParticipantToggleGroup
-                                    label="승자"
-                                    type="winner"
-                                    participants={participants}
-                                    selectedIds={gameDraft.winnerIds}
-                                    disabledIds={gameDraft.loserIds}
-                                    activeClass="border-cyan-400 bg-cyan-400/15 text-cyan-100"
-                                    onToggle={onToggleWinner}
-                                />
-                                <ParticipantToggleGroup
-                                    label="패자"
-                                    type="loser"
-                                    participants={participants}
-                                    selectedIds={gameDraft.loserIds}
-                                    disabledIds={gameDraft.winnerIds}
-                                    activeClass="border-rose-400 bg-rose-400/15 text-rose-100"
-                                    onToggle={onToggleLoser}
-                                />
+                                {activeSession.isInhouse ? (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {INHOUSE_TEAMS.map((team) => (
+                                            <button
+                                                className={`rounded-xl border px-3 py-3 text-sm font-black transition ${gameDraft.winnerTeam === team ? (team === INHOUSE_TEAM.A ? "border-indigo-400 bg-indigo-400/15 text-indigo-100" : "border-lime-400 bg-lime-400/15 text-lime-100") : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/20"}`}
+                                                key={team}
+                                                type="button"
+                                                onClick={() =>
+                                                    onSelectWinningTeam(team)
+                                                }
+                                            >
+                                                {INHOUSE_TEAM_LABELS[team]} 승리
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <ParticipantToggleGroup
+                                            label="승자"
+                                            type="winner"
+                                            participants={participants}
+                                            selectedIds={gameDraft.winnerIds}
+                                            disabledIds={gameDraft.loserIds}
+                                            activeClass="border-cyan-400 bg-cyan-400/15 text-cyan-100"
+                                            onToggle={onToggleWinner}
+                                        />
+                                        <ParticipantToggleGroup
+                                            label="패자"
+                                            type="loser"
+                                            participants={participants}
+                                            selectedIds={gameDraft.loserIds}
+                                            disabledIds={gameDraft.winnerIds}
+                                            activeClass="border-rose-400 bg-rose-400/15 text-rose-100"
+                                            onToggle={onToggleLoser}
+                                        />
+                                    </>
+                                )}
                                 <TextInput
                                     value={gameDraft.note}
                                     onChange={(event) =>
@@ -403,10 +458,20 @@ export function SessionModal({
                                 </Button>
                             </form>
 
-                            <SettlementPanel
-                                rows={settlements}
-                                ready={isGamesReady}
-                            />
+                            {activeSession.isInhouse ? (
+                                <InhouseSettlementPanel
+                                    friends={friends}
+                                    key={activeSession.id}
+                                    ready={isGamesReady}
+                                    rows={settlements}
+                                    session={activeSession}
+                                />
+                            ) : (
+                                <SettlementPanel
+                                    rows={settlements}
+                                    ready={isGamesReady}
+                                />
+                            )}
                         </div>
 
                         <div className="mt-4">
@@ -423,6 +488,7 @@ export function SessionModal({
                                             index={index}
                                             friends={friends}
                                             isLocked={activeSession.isLocked}
+                                            isInhouse={activeSession.isInhouse}
                                             onDeleteGame={onDeleteGame}
                                         />
                                     )}

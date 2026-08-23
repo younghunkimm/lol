@@ -1,8 +1,16 @@
 import { AnimatedList } from "../shared/motion";
 import { LoadingIcon, MoreIcon } from "../shared/ActionIcons";
 import { formatMoney, getName, sortByCreatedAt } from "../../lib/utils";
-import { Button, CardHeader, EmptyState, HeaderCount, Panel } from "../shared/ui";
+import {
+    Badge,
+    Button,
+    CardHeader,
+    EmptyState,
+    HeaderCount,
+    Panel,
+} from "../shared/ui";
 import { SessionLockControl } from "./SessionLockControl";
+import { SessionModeBadge } from "./SessionModeBadge";
 
 export function SessionList({
     sessions,
@@ -51,13 +59,50 @@ export function SessionList({
                                 <h3 className="truncate text-base font-black text-slate-50">
                                     {session.title}
                                 </h3>
-                                <p className="mt-1 truncate text-sm font-semibold text-slate-400">
-                                    {session.friendIds
-                                        .map((friendId) =>
-                                            getName(friends, friendId),
-                                        )
-                                        .join(", ")}
-                                </p>
+                                {session.isInhouse ? (
+                                    <div className="mt-2 grid gap-1.5 text-xs font-bold">
+                                        {[
+                                            {
+                                                ids: session.teamAIds,
+                                                className:
+                                                    "border-indigo-400/30 bg-indigo-400/10 text-indigo-100",
+                                            },
+                                            {
+                                                ids: session.teamBIds,
+                                                className:
+                                                    "border-lime-400/30 bg-lime-400/10 text-lime-100",
+                                            },
+                                        ].map(({ ids, className }, index) => (
+                                            <div
+                                                className="flex flex-wrap gap-1.5"
+                                                key={index}
+                                            >
+                                                {ids.map((friendId) => (
+                                                    <span
+                                                        className={`rounded-md border px-2 py-1 ${className}`}
+                                                        key={friendId}
+                                                    >
+                                                        {getName(
+                                                            friends,
+                                                            friendId,
+                                                        )}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-bold">
+                                        {session.friendIds.map((friendId) => (
+                                            <span
+                                                className="rounded-md bg-white/[0.06] px-2 py-1 text-slate-300"
+                                                key={friendId}
+                                            >
+                                                {getName(friends, friendId)}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                             <div className="flex flex-wrap gap-1.5 items-center">
                                 <SessionLockControl
@@ -65,12 +110,16 @@ export function SessionList({
                                     isLocked={session.isLocked}
                                     variant="icon"
                                 />
-                                <span className="rounded-full bg-violet-400/10 px-2.5 py-1 text-xs font-black text-violet-300">
-                                    {formatMoney(session.price)} / 판
-                                </span>
-                                <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-black text-slate-300">
+                                <SessionModeBadge
+                                    className="px-2 py-1"
+                                    session={session}
+                                />
+                                <Badge className="bg-violet-400/10 px-2.5 py-1 text-violet-300">
+                                    {formatMoney(session.price)} 빵
+                                </Badge>
+                                <Badge className="bg-white/[0.06] px-2.5 py-1 text-slate-300">
                                     {session.gameCount ?? 0}게임
-                                </span>
+                                </Badge>
                             </div>
                         </>
                     )}

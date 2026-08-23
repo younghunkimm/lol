@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { DEFAULT_PRICE } from "./constants";
+import { DEFAULT_PRICE, INHOUSE_TEAM } from "./constants";
 import { FriendManager } from "./components/friends/FriendManager";
 import { LeaderSummary } from "./components/dashboard/LeaderSummary";
 import { SessionComposer } from "./components/sessions/SessionComposer";
@@ -105,10 +105,14 @@ function App() {
         title: formatSessionTitle(),
         price: DEFAULT_PRICE,
         friendIds: [],
+        isInhouse: false,
+        teamAIds: [],
+        teamBIds: [],
     });
     const [gameDraft, setGameDraft] = useState({
         winnerIds: [],
         loserIds: [],
+        winnerTeam: null,
         note: "",
     });
 
@@ -270,12 +274,19 @@ function App() {
         const title = sessionDraft.title.trim() || formatSessionTitle();
         const price = Math.max(Number(sessionDraft.price) || DEFAULT_PRICE, 0);
 
-        if (
-            sessionDraft.friendIds.length < 2 ||
-            sessionDraft.friendIds.length > 5
-        ) {
+        const isValidInhouse =
+            sessionDraft.teamAIds.length >= 2 &&
+            sessionDraft.teamAIds.length <= 5 &&
+            sessionDraft.teamAIds.length === sessionDraft.teamBIds.length;
+        const isValidStandard =
+            sessionDraft.friendIds.length >= 2 &&
+            sessionDraft.friendIds.length <= 5;
+
+        if (sessionDraft.isInhouse ? !isValidInhouse : !isValidStandard) {
             setError({
-                message: "세션에는 2명부터 5명까지 선택할 수 있습니다.",
+                message: sessionDraft.isInhouse
+                    ? "내전은 양 팀을 같은 인원으로 2명부터 5명까지 배치해 주세요."
+                    : "세션에는 2명부터 5명까지 선택할 수 있습니다.",
                 id: Date.now(),
             });
             return;
@@ -289,6 +300,9 @@ function App() {
             title,
             price,
             friendIds: sessionDraft.friendIds,
+            isInhouse: sessionDraft.isInhouse,
+            teamAIds: sessionDraft.teamAIds,
+            teamBIds: sessionDraft.teamBIds,
             createdAt: nowIso(),
         };
 
@@ -316,6 +330,9 @@ function App() {
                 title: formatSessionTitle(),
                 price: DEFAULT_PRICE,
                 friendIds: [],
+                isInhouse: sessionDraft.isInhouse,
+                teamAIds: [],
+                teamBIds: [],
             });
             setActiveSessionId(savedSession.id);
             Promise.all([refreshSessions(), refreshStats()]).catch(
@@ -466,10 +483,21 @@ function App() {
     async function addGame(event) {
         event.preventDefault();
 
+        if (!activeSession) {
+            return;
+        }
+
+        if (activeSession.isInhouse && !gameDraft.winnerTeam) {
+            setModalError({
+                message: "승리한 팀을 선택해 주세요.",
+                id: Date.now(),
+            });
+            return;
+        }
+
         if (
-            !activeSession ||
-            !gameDraft.winnerIds.length ||
-            !gameDraft.loserIds.length
+            !activeSession.isInhouse &&
+            (!gameDraft.winnerIds.length || !gameDraft.loserIds.length)
         ) {
             setModalError({
                 message: "승자와 패자를 각각 1명 이상 선택해 주세요.",
@@ -478,7 +506,10 @@ function App() {
             return;
         }
 
-        if (gameDraft.winnerIds.length !== gameDraft.loserIds.length) {
+        if (
+            !activeSession.isInhouse &&
+            gameDraft.winnerIds.length !== gameDraft.loserIds.length
+        ) {
             setModalError({
                 message: "승자와 패자 수가 일치해야 합니다.",
                 id: Date.now(),
@@ -489,7 +520,7 @@ function App() {
         const overlap = gameDraft.winnerIds.some((friendId) =>
             gameDraft.loserIds.includes(friendId),
         );
-        if (overlap) {
+        if (!activeSession.isInhouse && overlap) {
             setModalError({
                 message: "같은 사람을 승자와 패자로 동시에 기록할 수 없습니다.",
                 id: Date.now(),
@@ -497,11 +528,22 @@ function App() {
             return;
         }
 
+        const winnerIds = activeSession.isInhouse
+            ? gameDraft.winnerTeam === INHOUSE_TEAM.A
+                ? activeSession.teamAIds
+                : activeSession.teamBIds
+            : gameDraft.winnerIds;
+        const loserIds = activeSession.isInhouse
+            ? gameDraft.winnerTeam === INHOUSE_TEAM.A
+                ? activeSession.teamBIds
+                : activeSession.teamAIds
+            : gameDraft.loserIds;
         const game = {
             id: createId(),
             sessionId: activeSession.id,
-            winnerIds: gameDraft.winnerIds,
-            loserIds: gameDraft.loserIds,
+            winnerIds,
+            loserIds,
+            winnerTeam: activeSession.isInhouse ? gameDraft.winnerTeam : null,
             note: gameDraft.note.trim(),
             createdAt: nowIso(),
         };
@@ -517,7 +559,12 @@ function App() {
             setModalError,
         );
         if (saved) {
-            setGameDraft({ winnerIds: [], loserIds: [], note: "" });
+            setGameDraft({
+                winnerIds: [],
+                loserIds: [],
+                winnerTeam: null,
+                note: "",
+            });
             Promise.all([
                 refreshSessionGames(activeSession.id),
                 refreshSessions(),
@@ -564,7 +611,12 @@ function App() {
         setIsSessionGamesLoading(false);
         setIsSessionLockUpdating(false);
         setModalError(null);
-        setGameDraft({ winnerIds: [], loserIds: [], note: "" });
+        setGameDraft({
+            winnerIds: [],
+            loserIds: [],
+            winnerTeam: null,
+            note: "",
+        });
     }
 
     function openSession(sessionId) {
@@ -580,6 +632,23 @@ function App() {
                 : [...current.friendIds, friendId].slice(0, 5);
 
             return { ...current, friendIds };
+        });
+    }
+
+    function moveInhouseFriend(friendId, team) {
+        setSessionDraft((current) => {
+            const teamAIds = current.teamAIds.filter((id) => id !== friendId);
+            const teamBIds = current.teamBIds.filter((id) => id !== friendId);
+
+            if (team === INHOUSE_TEAM.A) teamAIds.push(friendId);
+            if (team === INHOUSE_TEAM.B) teamBIds.push(friendId);
+
+            return {
+                ...current,
+                teamAIds,
+                teamBIds,
+                friendIds: [...teamAIds, ...teamBIds],
+            };
         });
     }
 
@@ -661,6 +730,7 @@ function App() {
                             onDraftChange={setSessionDraft}
                             onSubmit={createSession}
                             onToggleFriend={toggleSessionFriend}
+                            onMoveInhouseFriend={moveInhouseFriend}
                         />
                         <FriendManager
                             friends={data.friends}
@@ -707,6 +777,9 @@ function App() {
                 }
                 onToggleLoser={(friendId) =>
                     toggleGameFriend("loserIds", friendId)
+                }
+                onSelectWinningTeam={(winnerTeam) =>
+                    setGameDraft((current) => ({ ...current, winnerTeam }))
                 }
                 onGameDraftChange={setGameDraft}
             />

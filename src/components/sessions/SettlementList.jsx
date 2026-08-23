@@ -1,4 +1,4 @@
-import { LayoutGroup, motion, useReducedMotion } from "motion/react";
+import { LayoutGroup, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { formatSignedMoney, getSignedMoneyClass } from "../../lib/utils";
 import { AnimatedNumber } from "../shared/motion";
 
@@ -53,8 +53,9 @@ function SettlementRow({ row, animate }) {
 }
 
 export function SettlementList({ rows, ready }) {
+    const isPresent = useIsPresent();
     const reducedMotion = useReducedMotion();
-    const animate = ready && !reducedMotion;
+    const animate = ready && !reducedMotion && isPresent;
 
     const rowElements = rows.map((row) => (
         <SettlementRow animate={animate} key={row.id} row={row} />

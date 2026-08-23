@@ -140,6 +140,9 @@ function fromSessionRow(row) {
         title: row.title,
         price: row.price,
         friendIds: row.friend_ids ?? [],
+        isInhouse: row.is_inhouse ?? false,
+        teamAIds: row.team_a_ids ?? [],
+        teamBIds: row.team_b_ids ?? [],
         createdAt: row.created_at,
         isLocked: row.is_locked ?? true,
         gameCount: Number(row.game_count) || 0,
@@ -152,6 +155,9 @@ function toSessionRow(session) {
         title: session.title,
         price: session.price,
         friend_ids: session.friendIds,
+        is_inhouse: session.isInhouse,
+        team_a_ids: session.teamAIds,
+        team_b_ids: session.teamBIds,
         created_at: session.createdAt,
     };
 }
@@ -162,6 +168,7 @@ function fromGameRow(row) {
         sessionId: row.session_id,
         winnerIds: row.winner_ids ?? [],
         loserIds: row.loser_ids ?? [],
+        winnerTeam: row.winner_team ?? null,
         note: row.note ?? "",
         createdAt: row.created_at,
     };
@@ -241,6 +248,7 @@ function toGameRow(game) {
         session_id: game.sessionId,
         winner_ids: game.winnerIds,
         loser_ids: game.loserIds,
+        winner_team: game.winnerTeam,
         note: game.note,
         created_at: game.createdAt,
     };
