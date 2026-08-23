@@ -378,7 +378,15 @@ export function SessionModal({
                                     >
                                         <PencilIcon className="size-4" />
                                     </button>
-                                    <span>{activeSession.title}</span>
+                                    <span
+                                        onClick={
+                                            isTitleUpdating
+                                                ? undefined
+                                                : startTitleEditing
+                                        }
+                                    >
+                                        {activeSession.title}
+                                    </span>
                                 </h2>
                             )}
                         </div>
