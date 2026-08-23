@@ -124,7 +124,7 @@ function GameRecordCard({
                 </div>
             </div>
             {game.note && (
-                <p className="mt-2 text-sm font-semibold text-slate-400">
+                <p className="mt-2 break-all text-sm font-semibold text-slate-400">
                     {game.note}
                 </p>
             )}
