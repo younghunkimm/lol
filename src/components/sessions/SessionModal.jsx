@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { formatMoney, getName } from "../../lib/utils";
 import { AnimatedList } from "../shared/motion";
+import { CloseIcon, PlusIcon, TrashIcon } from "../shared/ActionIcons";
 import { SettlementList } from "./SettlementList";
 import { Button, DangerButton, EmptyState, TextInput } from "../shared/ui";
 import { SessionLockControl } from "./SessionLockControl";
@@ -104,11 +105,13 @@ function GameRecordCard({
                     </span>
                     {!isLocked ? (
                         <DangerButton
+                            aria-label="승패 기록 삭제"
                             className="rounded-lg px-2.5 py-1.5 text-xs"
                             type="button"
                             onClick={() => onDeleteGame(game.id)}
+                            title="승패 기록 삭제"
                         >
-                            삭제
+                            <TrashIcon className="size-4" />
                         </DangerButton>
                     ) : null}
                 </div>
@@ -201,10 +204,12 @@ export function SessionModal({
                 <div className="flex items-start justify-between gap-3">
                     {!activeSession.isLocked ? (
                         <DangerButton
+                            aria-label="세션 삭제"
                             type="button"
                             onClick={() => onDeleteSession(activeSession.id)}
+                            title="세션 삭제"
                         >
-                            삭제
+                            <TrashIcon />
                         </DangerButton>
                     ) : (
                         <span />
@@ -215,8 +220,8 @@ export function SessionModal({
                             isUpdating={isLockUpdating}
                             onToggle={() => onToggleLock(activeSession.id)}
                         />
-                        <Button type="button" onClick={onClose}>
-                            닫기
+                        <Button aria-label="닫기" type="button" onClick={onClose} title="닫기">
+                            <CloseIcon />
                         </Button>
                     </div>
                 </div>
@@ -269,8 +274,8 @@ export function SessionModal({
                             }
                             placeholder="메모"
                         />
-                        <Button className="w-full" type="submit">
-                            승패 추가
+                        <Button aria-label="승패 기록 추가" className="w-full" type="submit" title="승패 기록 추가">
+                            <PlusIcon />
                         </Button>
                     </form>
 

@@ -1,4 +1,5 @@
 import { AnimatedList } from "../shared/motion";
+import { DetailIcon, LoadingIcon, MoreIcon } from "../shared/ActionIcons";
 import { formatMoney, getName, sortByCreatedAt } from "../../lib/utils";
 import { Button, EmptyState, Panel } from "../shared/ui";
 import { SessionLockControl } from "./SessionLockControl";
@@ -55,10 +56,12 @@ export function SessionList({
                             </div>
                         <div className="flex">
                             <Button
+                                aria-label={`${session.title} 상세보기`}
                                 type="button"
                                 onClick={() => onOpenSession(session.id)}
+                                title={`${session.title} 상세보기`}
                             >
-                                상세보기
+                                <DetailIcon />
                             </Button>
                         </div>
                         </>
@@ -70,11 +73,13 @@ export function SessionList({
                 {hasMore ? (
                     <Button
                         className="justify-self-center px-6"
+                        aria-label={isLoadingMore ? "세션 불러오는 중" : "세션 더보기"}
                         type="button"
                         disabled={isLoadingMore}
                         onClick={onLoadMore}
+                        title={isLoadingMore ? "세션 불러오는 중" : "세션 더보기"}
                     >
-                        {isLoadingMore ? "불러오는 중" : "더보기"}
+                        {isLoadingMore ? <LoadingIcon /> : <MoreIcon />}
                     </Button>
                 ) : null}
             </div>

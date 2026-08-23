@@ -1,4 +1,5 @@
 import { AnimatedList } from "../shared/motion";
+import { PlusIcon, TrashIcon } from "../shared/ActionIcons";
 import { Button, DangerButton, Panel, TextInput } from "../shared/ui";
 
 export function FriendManager({
@@ -28,8 +29,8 @@ export function FriendManager({
                     onChange={(event) => onNameChange(event.target.value)}
                     placeholder="이름 입력"
                 />
-                <Button className="px-3 py-2" type="submit">
-                    추가
+                <Button aria-label="프로게이머 추가" className="px-3 py-2" title="프로게이머 추가" type="submit">
+                    <PlusIcon />
                 </Button>
             </form>
             <div className="grid min-h-25 flex-[1_0_0] grid-cols-2 gap-1.5 overflow-y-auto pr-1">
@@ -43,11 +44,13 @@ export function FriendManager({
                                 {friend.name}
                             </span>
                             <DangerButton
-                                className="!rounded-md !px-2.5 !py-1.5 text-xs"
+                                aria-label={`${friend.name} 삭제`}
+                                className="!rounded-md !px-2.5 !py-1.5"
                                 type="button"
                                 onClick={() => onRemoveFriend(friend.id)}
+                                title={`${friend.name} 삭제`}
                             >
-                                삭제
+                                <TrashIcon className="size-4" />
                             </DangerButton>
                         </>
                     )}
