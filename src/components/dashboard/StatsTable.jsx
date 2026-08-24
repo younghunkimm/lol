@@ -30,7 +30,7 @@ function RankBadge({ rank }) {
 const rankingRowClass =
     "grid grid-cols-[auto_minmax(0,1fr)_minmax(0,7rem)] items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.035] p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:p-4";
 
-function RankingRow({ row, rank, animate }) {
+function RankingRow({ row, rank, animate, layoutDependency }) {
     const totalGames = row.totalGames ?? row.wins + row.losses;
     const content = (
         <>
@@ -76,6 +76,7 @@ function RankingRow({ row, rank, animate }) {
         <motion.div
             className={rankingRowClass}
             layout="position"
+            layoutDependency={layoutDependency}
             transition={{
                 layout: {
                     type: "spring",
@@ -94,8 +95,15 @@ function RankingList({ stats }) {
     const isPresent = useIsPresent();
     const reducedMotion = useReducedMotion();
     const animate = !reducedMotion && isPresent;
+    const layoutDependency = stats.map((row) => row.id).join("|");
     const rows = stats.map((row, index) => (
-        <RankingRow animate={animate} key={row.id} rank={index + 1} row={row} />
+        <RankingRow
+            animate={animate}
+            key={row.id}
+            layoutDependency={layoutDependency}
+            rank={index + 1}
+            row={row}
+        />
     ));
 
     return animate ? <LayoutGroup>{rows}</LayoutGroup> : rows;
