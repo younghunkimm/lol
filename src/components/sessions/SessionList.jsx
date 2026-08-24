@@ -32,34 +32,35 @@ export function SessionList({
 
     return (
         <Panel className="mb-4">
-            <CardHeader
-                className="mb-4"
-                right={
-                    <div className="flex items-center gap-2">
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <CardHeader
+                    meta={
                         <HeaderCount
                             prefix="총 "
                             suffix="건"
                             value={totalSessions}
                         />
-                        <button
-                            className={`rounded-full px-2.5 py-1 text-xs font-black transition ${
-                                isSelectionMode
-                                    ? "bg-white/[0.1] text-slate-200 hover:bg-white/[0.16]"
-                                    : "bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/15"
-                            }`}
-                            type="button"
-                            onClick={
-                                isSelectionMode
-                                    ? onCancelSelection
-                                    : onStartSelection
-                            }
-                        >
-                            {isSelectionMode ? "취소" : "선택"}
-                        </button>
-                    </div>
-                }
-                title="세션 목록"
-            />
+                    }
+                    title="세션 목록"
+                />
+                <button
+                    aria-pressed={isSelectionMode}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-black shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 ${
+                        isSelectionMode
+                            ? "border-rose-300/50 bg-rose-400/15 text-rose-100 shadow-rose-950/30 hover:bg-rose-400/25"
+                            : "border-cyan-300/80 bg-cyan-400 text-slate-950 shadow-cyan-950/40 hover:bg-cyan-300"
+                    }`}
+                    type="button"
+                    onClick={
+                        isSelectionMode
+                            ? onCancelSelection
+                            : onStartSelection
+                    }
+                >
+                    <CheckIcon className="size-3.5" />
+                    {isSelectionMode ? "선택 취소" : "선택 모드"}
+                </button>
+            </div>
             <div className="grid gap-3">
                 <AnimatedList
                     as="button"

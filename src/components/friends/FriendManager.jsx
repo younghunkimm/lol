@@ -19,7 +19,7 @@ export function FriendManager({
     return (
         <Panel className="flex flex-col gap-3 p-3 md:p-4">
             <CardHeader
-                right={<HeaderCount suffix="명" value={friends.length} />}
+                meta={<HeaderCount suffix="명" value={friends.length} />}
                 title="프로게이머 등록"
             />
             <form

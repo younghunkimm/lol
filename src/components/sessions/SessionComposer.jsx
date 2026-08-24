@@ -177,30 +177,27 @@ export function SessionComposer({
 }) {
     return (
         <Panel>
-            <CardHeader
-                className="mb-4"
-                right={
-                    <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-black text-slate-300">
-                        내전
-                        <input
-                            checked={sessionDraft.isInhouse}
-                            className="peer sr-only"
-                            type="checkbox"
-                            onChange={(event) =>
-                                onDraftChange({
-                                    ...sessionDraft,
-                                    isInhouse: event.target.checked,
-                                    friendIds: [],
-                                    teamAIds: [],
-                                    teamBIds: [],
-                                })
-                            }
-                        />
-                        <span className="relative h-6 w-11 rounded-full bg-slate-600 transition peer-checked:bg-orange-400 after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5" />
-                    </label>
-                }
-                title="세션 생성"
-            />
+            <div className="mb-4 flex items-center justify-between gap-3">
+                <CardHeader title="세션 생성" />
+                <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-xs font-black text-slate-300">
+                    내전
+                    <input
+                        checked={sessionDraft.isInhouse}
+                        className="peer sr-only"
+                        type="checkbox"
+                        onChange={(event) =>
+                            onDraftChange({
+                                ...sessionDraft,
+                                isInhouse: event.target.checked,
+                                friendIds: [],
+                                teamAIds: [],
+                                teamBIds: [],
+                            })
+                        }
+                    />
+                    <span className="relative h-6 w-11 rounded-full bg-slate-600 transition peer-checked:bg-orange-400 after:absolute after:left-1 after:top-1 after:size-4 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5" />
+                </label>
+            </div>
             <form className="grid gap-3" onSubmit={onSubmit}>
                 <label className="grid gap-1.5 text-sm font-extrabold text-slate-300">
                     세션 제목

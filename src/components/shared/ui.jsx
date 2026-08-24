@@ -42,13 +42,13 @@ export function Panel({ className = "", children }) {
     );
 }
 
-export function CardHeader({ className = "", title, right }) {
+export function CardHeader({ className = "", meta, title }) {
     return (
-        <div
-            className={`flex items-center justify-between gap-3 ${className}`.trim()}
-        >
-            <h2 className="text-lg font-black tracking-tight">{title}</h2>
-            {right}
+        <div className={`flex min-w-0 items-center gap-2 ${className}`.trim()}>
+            <h2 className="truncate text-lg font-black tracking-tight">
+                {title}
+            </h2>
+            {meta}
         </div>
     );
 }

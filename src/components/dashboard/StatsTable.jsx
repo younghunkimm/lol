@@ -114,7 +114,7 @@ export function StatsTable({ stats }) {
         <Panel>
             <CardHeader
                 className="mb-4"
-                right={
+                meta={
                     <span className="rounded-full bg-white/[0.06] px-2.5 py-1 text-xs font-black text-slate-300">
                         전체 세션 기준
                     </span>
