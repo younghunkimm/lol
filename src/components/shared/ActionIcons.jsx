@@ -51,6 +51,23 @@ export function CloseIcon({ className = "" }) {
     );
 }
 
+export function CheckIcon({ className = "" }) {
+    return (
+        <svg
+            aria-hidden="true"
+            className={`${iconClassName} ${className}`.trim()}
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.5"
+            viewBox="0 0 24 24"
+        >
+            <path d="m5 12 4.5 4.5L19 7" />
+        </svg>
+    );
+}
+
 export function PencilIcon({ className = "" }) {
     return (
         <svg

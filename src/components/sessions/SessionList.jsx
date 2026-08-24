@@ -1,5 +1,5 @@
 import { AnimatedList } from "../shared/motion";
-import { LoadingIcon, MoreIcon } from "../shared/ActionIcons";
+import { CheckIcon, LoadingIcon, MoreIcon } from "../shared/ActionIcons";
 import { formatMoney, getName, sortByCreatedAt } from "../../lib/utils";
 import {
     Badge,
@@ -19,43 +19,97 @@ export function SessionList({
     hasMore,
     isLoadingMore,
     activeSessionId,
+    isSelectionMode,
+    selectedSessionIds,
     onOpenSession,
     onLoadMore,
+    onStartSelection,
+    onCancelSelection,
+    onToggleSelection,
+    onOpenSelectedSettlement,
 }) {
+    const selectedCount = selectedSessionIds.length;
+
     return (
         <Panel className="mb-4">
             <CardHeader
                 className="mb-4"
                 right={
-                    <HeaderCount
-                        prefix="총 "
-                        suffix="건"
-                        value={totalSessions}
-                    />
+                    <div className="flex items-center gap-2">
+                        <HeaderCount
+                            prefix="총 "
+                            suffix="건"
+                            value={totalSessions}
+                        />
+                        <button
+                            className={`rounded-full px-2.5 py-1 text-xs font-black transition ${
+                                isSelectionMode
+                                    ? "bg-white/[0.1] text-slate-200 hover:bg-white/[0.16]"
+                                    : "bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/15"
+                            }`}
+                            type="button"
+                            onClick={
+                                isSelectionMode
+                                    ? onCancelSelection
+                                    : onStartSelection
+                            }
+                        >
+                            {isSelectionMode ? "취소" : "선택"}
+                        </button>
+                    </div>
                 }
                 title="세션 목록"
             />
             <div className="grid gap-3">
                 <AnimatedList
                     as="button"
-                    className={(session) =>
-                        `grid w-full gap-3 rounded-2xl border p-4 text-left shadow-sm transition sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center ${
-                            session.id === activeSessionId
+                    className={(session) => {
+                        const isSelected = selectedSessionIds.includes(session.id);
+
+                        return `relative grid w-full gap-3 rounded-2xl border p-4 text-left shadow-sm transition sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center ${
+                            isSelectionMode && isSelected
                                 ? "border-cyan-400 bg-cyan-400/10 shadow-cyan-400/20 ring-2 ring-cyan-400/30"
-                                : "border-white/10 bg-white/[0.03] shadow-black/20 hover:border-cyan-400/50 hover:bg-cyan-400/[0.06]"
-                        }`
-                    }
+                                : session.id === activeSessionId
+                                  ? "border-cyan-400 bg-cyan-400/10 shadow-cyan-400/20 ring-2 ring-cyan-400/30"
+                                  : "border-white/10 bg-white/[0.03] shadow-black/20 hover:border-cyan-400/50 hover:bg-cyan-400/[0.06]"
+                        }`;
+                    }}
                     getKey={(session) => session.id}
                     itemProps={(session) => ({
-                        "aria-label": `${session.title} 상세보기`,
-                        "aria-pressed": session.id === activeSessionId,
+                        "aria-label": isSelectionMode
+                            ? `${session.title} ${selectedSessionIds.includes(session.id) ? "선택 해제" : "선택"}`
+                            : `${session.title} 상세보기`,
+                        "aria-pressed": isSelectionMode
+                            ? selectedSessionIds.includes(session.id)
+                            : session.id === activeSessionId,
                         type: "button",
-                        onClick: () => onOpenSession(session.id),
+                        onClick: () =>
+                            isSelectionMode
+                                ? onToggleSelection(session.id)
+                                : onOpenSession(session.id),
                     })}
                     items={sortByCreatedAt(sessions)}
                     renderItem={(session) => (
                         <>
-                            <div className="min-w-0">
+                            {isSelectionMode ? (
+                                <span
+                                    aria-hidden="true"
+                                    className={`absolute left-4 top-4 grid size-6 place-items-center rounded-full border transition ${
+                                        selectedSessionIds.includes(session.id)
+                                            ? "border-cyan-300 bg-cyan-300 text-slate-950"
+                                            : "border-white/20 bg-[#151a23] text-slate-600"
+                                    }`}
+                                >
+                                    {selectedSessionIds.includes(session.id) ? (
+                                        <CheckIcon className="size-4" />
+                                    ) : null}
+                                </span>
+                            ) : null}
+                            <div
+                                className={`min-w-0 ${
+                                    isSelectionMode ? "pl-9" : ""
+                                }`}
+                            >
                                 <h3 className="truncate text-base font-black text-slate-50">
                                     {session.title}
                                 </h3>
@@ -127,6 +181,21 @@ export function SessionList({
                 {!sessions.length && (
                     <EmptyState>아직 생성된 세션이 없습니다.</EmptyState>
                 )}
+                {isSelectionMode ? (
+                    <div className="sticky bottom-3 z-10 flex items-center justify-between gap-3 rounded-2xl border border-cyan-400/20 bg-[#111722]/95 p-3 shadow-lg shadow-black/30 backdrop-blur">
+                        <strong className="text-sm text-slate-200">
+                            <span className="text-cyan-300">{selectedCount}</span>개 선택됨
+                        </strong>
+                        <Button
+                            className="px-3 py-2"
+                            type="button"
+                            disabled={!selectedCount}
+                            onClick={onOpenSelectedSettlement}
+                        >
+                            합산 정산 보기
+                        </Button>
+                    </div>
+                ) : null}
                 {hasMore ? (
                     <Button
                         className="justify-self-center px-6"

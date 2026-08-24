@@ -242,3 +242,50 @@ export function createSessionSettlements({ participants, games, session }) {
         }))
         .sort((a, b) => b.net - a.net || a.name.localeCompare(b.name, "ko"));
 }
+
+export function createCombinedSessionSettlements({
+    friends,
+    gamesBySession,
+    sessions,
+}) {
+    const rows = new Map();
+    const friendNames = new Map(friends.map((friend) => [friend.id, friend.name]));
+
+    function addParticipant(friendId) {
+        if (!rows.has(friendId)) {
+            rows.set(friendId, {
+                id: friendId,
+                name: friendNames.get(friendId) ?? "프로게이머",
+                wins: 0,
+                losses: 0,
+                paid: 0,
+                received: 0,
+            });
+        }
+
+        return rows.get(friendId);
+    }
+
+    sessions.forEach((session) => {
+        session.friendIds.forEach(addParticipant);
+
+        (gamesBySession.get(session.id) ?? []).forEach((game) => {
+            const settlement = getGameSettlement(game, session);
+
+            game.winnerIds.forEach((friendId) => {
+                const row = addParticipant(friendId);
+                row.wins += 1;
+                row.received += settlement.receiverAmount;
+            });
+            game.loserIds.forEach((friendId) => {
+                const row = addParticipant(friendId);
+                row.losses += 1;
+                row.paid += settlement.payerAmount;
+            });
+        });
+    });
+
+    return Array.from(rows.values())
+        .map((row) => ({ ...row, net: row.received - row.paid }))
+        .sort((a, b) => b.net - a.net || a.name.localeCompare(b.name, "ko"));
+}

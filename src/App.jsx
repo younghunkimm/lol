@@ -5,6 +5,7 @@ import { LeaderSummary } from "./components/dashboard/LeaderSummary";
 import { SessionComposer } from "./components/sessions/SessionComposer";
 import { SessionList } from "./components/sessions/SessionList";
 import { SessionModal } from "./components/sessions/SessionModal";
+import { SelectedSessionsSettlementModal } from "./components/sessions/SelectedSessionsSettlementModal";
 import { StatsTable } from "./components/dashboard/StatsTable";
 import { Button, Panel, TextInput } from "./components/shared/ui";
 import { LoadingIcon } from "./components/shared/ActionIcons";
@@ -24,7 +25,11 @@ import {
 import { useAuth } from "./hooks/useAuth";
 import { useDashboardData } from "./hooks/useDashboardData";
 import { useRealtimeSync } from "./hooks/useRealtimeSync";
-import { createLeaders, createSessionSettlements } from "./lib/stats";
+import {
+    createCombinedSessionSettlements,
+    createLeaders,
+    createSessionSettlements,
+} from "./lib/stats";
 import {
     createId,
     formatSessionTitle,
@@ -96,10 +101,21 @@ function App() {
     const [activeSessionId, setActiveSessionId] = useState("");
     const [isSessionGamesLoading, setIsSessionGamesLoading] = useState(false);
     const isCreatingSessionRef = useRef(false);
+    const selectedSettlementRequestRef = useRef(0);
     const [isCreatingSession, setIsCreatingSession] = useState(false);
     const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
     const [isSessionLockUpdating, setIsSessionLockUpdating] = useState(false);
     const [isSessionTitleUpdating, setIsSessionTitleUpdating] = useState(false);
+    const [isSessionSelectionMode, setIsSessionSelectionMode] = useState(false);
+    const [selectedSessionIds, setSelectedSessionIds] = useState([]);
+    const [selectedSettlement, setSelectedSettlement] = useState({
+        error: "",
+        isLoading: false,
+        isOpen: false,
+        rows: [],
+        selectedCount: 0,
+        totalGames: 0,
+    });
     const [friendName, setFriendName] = useState("");
     const [sessionDraft, setSessionDraft] = useState({
         title: formatSessionTitle(),
@@ -175,6 +191,9 @@ function App() {
 
     const activeSession = data.sessions.find(
         (session) => session.id === activeSessionId,
+    );
+    const availableSelectedSessionIds = selectedSessionIds.filter((id) =>
+        data.sessions.some((session) => session.id === id),
     );
     const activeParticipants = activeSession
         ? activeSession.friendIds.map((friendId) => ({
@@ -624,6 +643,91 @@ function App() {
         setActiveSessionId(sessionId);
     }
 
+    function startSessionSelection() {
+        setIsSessionSelectionMode(true);
+    }
+
+    function cancelSessionSelection() {
+        setIsSessionSelectionMode(false);
+        setSelectedSessionIds([]);
+    }
+
+    function toggleSessionSelection(sessionId) {
+        setSelectedSessionIds((current) =>
+            current.includes(sessionId)
+                ? current.filter((id) => id !== sessionId)
+                : [...current, sessionId],
+        );
+    }
+
+    async function openSelectedSessionsSettlement() {
+        const sessions = data.sessions.filter((session) =>
+            selectedSessionIds.includes(session.id),
+        );
+
+        if (!sessions.length) {
+            return;
+        }
+
+        const requestId = selectedSettlementRequestRef.current + 1;
+        selectedSettlementRequestRef.current = requestId;
+        setSelectedSettlement({
+            error: "",
+            isLoading: true,
+            isOpen: true,
+            rows: [],
+            selectedCount: sessions.length,
+            totalGames: 0,
+        });
+
+        try {
+            const gamesBySession = new Map(
+                await Promise.all(
+                    sessions.map(async (session) => [
+                        session.id,
+                        await loadSessionGames(session.id),
+                    ]),
+                ),
+            );
+            const totalGames = Array.from(gamesBySession.values()).reduce(
+                (total, games) => total + games.length,
+                0,
+            );
+            const rows = createCombinedSessionSettlements({
+                friends: data.friends,
+                gamesBySession,
+                sessions,
+            });
+
+            if (selectedSettlementRequestRef.current === requestId) {
+                setSelectedSettlement({
+                    error: "",
+                    isLoading: false,
+                    isOpen: true,
+                    rows,
+                    selectedCount: sessions.length,
+                    totalGames,
+                });
+            }
+        } catch (loadError) {
+            if (selectedSettlementRequestRef.current === requestId) {
+                setSelectedSettlement({
+                    error: `정산을 불러오지 못했습니다: ${loadError.message}`,
+                    isLoading: false,
+                    isOpen: true,
+                    rows: [],
+                    selectedCount: sessions.length,
+                    totalGames: 0,
+                });
+            }
+        }
+    }
+
+    function closeSelectedSessionsSettlement() {
+        selectedSettlementRequestRef.current += 1;
+        setSelectedSettlement((current) => ({ ...current, isOpen: false }));
+    }
+
     function toggleSessionFriend(friendId) {
         setSessionDraft((current) => {
             const exists = current.friendIds.includes(friendId);
@@ -748,8 +852,14 @@ function App() {
                         hasMore={data.hasMoreSessions}
                         isLoadingMore={isLoadingMoreSessions}
                         activeSessionId={activeSessionId}
+                        isSelectionMode={isSessionSelectionMode}
+                        selectedSessionIds={availableSelectedSessionIds}
                         onOpenSession={openSession}
                         onLoadMore={loadMoreSessions}
+                        onStartSelection={startSessionSelection}
+                        onCancelSelection={cancelSessionSelection}
+                        onToggleSelection={toggleSessionSelection}
+                        onOpenSelectedSettlement={openSelectedSessionsSettlement}
                     />
 
                     <StatsTable stats={stats} />
@@ -782,6 +892,16 @@ function App() {
                     setGameDraft((current) => ({ ...current, winnerTeam }))
                 }
                 onGameDraftChange={setGameDraft}
+            />
+
+            <SelectedSessionsSettlementModal
+                error={selectedSettlement.error}
+                isLoading={selectedSettlement.isLoading}
+                isOpen={selectedSettlement.isOpen}
+                rows={selectedSettlement.rows}
+                selectedCount={selectedSettlement.selectedCount}
+                totalGames={selectedSettlement.totalGames}
+                onClose={closeSelectedSessionsSettlement}
             />
 
             <footer className="mt-8 pb-2 text-center text-xs font-semibold text-slate-500">
