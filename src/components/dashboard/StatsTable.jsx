@@ -17,7 +17,7 @@ export function StatsTable({ stats }) {
                         전체 세션 기준
                     </span>
                 }
-                title="개인별 승률"
+                title="게임 통계"
             />
             <div className="overflow-x-auto">
                 <table className="w-full min-w-[760px] border-collapse text-left">
