@@ -1,11 +1,105 @@
-import {
-    formatMoney,
-    formatSignedMoney,
-    getNetClass,
-    getWinRateClass,
-} from "../../lib/utils";
-import { AnimatedList, AnimatedNumber } from "../shared/motion";
+import { formatSignedMoney, getNetClass, getWinRateClass } from "../../lib/utils";
+import { LayoutGroup, motion, useIsPresent, useReducedMotion } from "motion/react";
+import { AnimatedNumber } from "../shared/motion";
 import { CardHeader, EmptyState, Panel } from "../shared/ui";
+
+const rankStyles = [
+    "border-amber-300/30 bg-amber-300/15 text-amber-200",
+    "border-slate-300/25 bg-slate-300/10 text-slate-200",
+    "border-orange-400/25 bg-orange-400/10 text-orange-200",
+];
+
+function RankBadge({ rank }) {
+    const isRanked = Number.isInteger(rank);
+    const isPodium = isRanked && rank <= 3;
+
+    return (
+        <span
+            aria-label={isRanked ? `${rank}위` : "순위 없음"}
+            className={`grid size-9 shrink-0 place-items-center rounded-xl border text-sm font-black tabular-nums ${
+                isPodium
+                    ? rankStyles[rank - 1]
+                    : "border-white/10 bg-white/[0.04] text-slate-400"
+            }`}
+        >
+            {isRanked ? rank : "-"}
+        </span>
+    );
+}
+
+const rankingRowClass =
+    "grid grid-cols-[auto_minmax(0,1fr)_minmax(0,7rem)] items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.035] p-3 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:p-4";
+
+function RankingRow({ row, rank, animate }) {
+    const totalGames = row.totalGames ?? row.wins + row.losses;
+    const content = (
+        <>
+            <RankBadge rank={totalGames ? rank : null} />
+            <div className="min-w-0">
+                <strong className="block truncate text-sm font-black text-slate-100 sm:text-base">
+                    {row.name}
+                </strong>
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs font-bold text-slate-400">
+                    <span className="text-cyan-300">{row.wins}승</span>
+                    <span className="text-rose-300">{row.losses}패</span>
+                </span>
+            </div>
+            <div className="min-w-0 text-right">
+                <strong
+                    className={`block break-all text-base font-black tabular-nums sm:text-lg ${getNetClass(row.net)}`}
+                >
+                    <AnimatedNumber
+                        animateInitial
+                        format={formatSignedMoney}
+                        value={row.net}
+                    />
+                </strong>
+                <span className="mt-1 block text-xs font-black text-slate-500">
+                    승률 {" "}
+                    <span className={getWinRateClass(row.winRate)}>
+                        <AnimatedNumber
+                            animateInitial
+                            format={(value) => `${value}%`}
+                            value={row.winRate}
+                        />
+                    </span>
+                </span>
+            </div>
+        </>
+    );
+
+    if (!animate) {
+        return <div className={rankingRowClass}>{content}</div>;
+    }
+
+    return (
+        <motion.div
+            className={rankingRowClass}
+            layout="position"
+            transition={{
+                layout: {
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 30,
+                    mass: 0.7,
+                },
+            }}
+        >
+            {content}
+        </motion.div>
+    );
+}
+
+function RankingList({ stats }) {
+    const isPresent = useIsPresent();
+    const reducedMotion = useReducedMotion();
+    const animate = !reducedMotion && isPresent;
+    const rows = stats.map((row, index) => (
+        <RankingRow animate={animate} key={row.id} rank={index + 1} row={row} />
+    ));
+
+    return animate ? <LayoutGroup>{rows}</LayoutGroup> : rows;
+}
 
 export function StatsTable({ stats }) {
     return (
@@ -17,93 +111,15 @@ export function StatsTable({ stats }) {
                         전체 세션 기준
                     </span>
                 }
-                title="게임 통계"
+                title="게임 랭킹"
             />
-            <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] border-collapse text-left">
-                    <thead>
-                        <tr className="border-b border-white/10 text-xs font-black text-slate-300">
-                            <th className="px-3 py-3">프로게이머</th>
-                            <th className="px-3 py-3">손익</th>
-                            <th className="px-3 py-3">승률</th>
-                            <th className="px-3 py-3">승</th>
-                            <th className="px-3 py-3">패</th>
-                            <th className="px-3 py-3">손해</th>
-                            <th className="px-3 py-3">이득</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <AnimatedList
-                            as="tr"
-                            className={(_, index) =>
-                                `border-b border-white/5 text-sm font-bold text-slate-300 ${
-                                    index % 2 === 0
-                                        ? "bg-[#151a23]"
-                                        : "bg-white/[0.03]"
-                                }`
-                            }
-                            getKey={(row) => row.id}
-                            items={stats}
-                            renderItem={(row) => (
-                                <>
-                                    <td className="px-3 py-3">{row.name}</td>
-                                    <td
-                                        className={`px-3 py-3 font-black ${getNetClass(row.net)}`}
-                                    >
-                                        <AnimatedNumber
-                                            animateInitial
-                                            format={formatSignedMoney}
-                                            value={row.net}
-                                        />
-                                    </td>
-                                    <td
-                                        className={`px-3 py-3 font-black ${getWinRateClass(row.winRate)}`}
-                                    >
-                                        <AnimatedNumber
-                                            animateInitial
-                                            format={(value) => `${value}%`}
-                                            value={row.winRate}
-                                        />
-                                    </td>
-                                    <td className="px-3 py-3">
-                                        <AnimatedNumber
-                                            animateInitial
-                                            format={String}
-                                            value={row.wins}
-                                        />
-                                    </td>
-                                    <td className="px-3 py-3">
-                                        <AnimatedNumber
-                                            animateInitial
-                                            format={String}
-                                            value={row.losses}
-                                        />
-                                    </td>
-                                    <td className="px-3 py-3">
-                                        <AnimatedNumber
-                                            animateInitial
-                                            format={formatMoney}
-                                            value={row.paid}
-                                        />
-                                    </td>
-                                    <td className="px-3 py-3">
-                                        <AnimatedNumber
-                                            animateInitial
-                                            format={formatMoney}
-                                            value={row.received}
-                                        />
-                                    </td>
-                                </>
-                            )}
-                        />
-                    </tbody>
-                </table>
-                {!stats.length && (
-                    <EmptyState>
-                        프로게이머를 추가하면 통계가 표시됩니다.
-                    </EmptyState>
-                )}
-            </div>
+            {stats.length ? (
+                <div className="grid gap-2 md:grid-cols-2">
+                    <RankingList stats={stats} />
+                </div>
+            ) : (
+                <EmptyState>프로게이머를 추가하면 랭킹이 표시됩니다.</EmptyState>
+            )}
         </Panel>
     );
 }
