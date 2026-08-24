@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { formatMoney, getName } from "../../lib/utils";
+import { formatMoney, formatRecordedAt, getName } from "../../lib/utils";
 import {
     getOpponentInhouseTeam,
     INHOUSE_TEAM,
@@ -114,6 +114,12 @@ function GameRecordCard({
             className={`rounded-2xl border bg-[#151a23] p-4 ${index === 0 ? "border-cyan-400/60" : "border-white/10"}`}
             key={game.id}
         >
+            <time
+                className="mb-2 block text-xs font-semibold text-slate-400"
+                dateTime={game.createdAt}
+            >
+                {formatRecordedAt(game.createdAt)}
+            </time>
             <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3">
                 <div className="min-w-0 rounded-xl border border-cyan-400/10 bg-cyan-400/10 px-3 py-3 text-left">
                     <span

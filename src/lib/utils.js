@@ -22,6 +22,16 @@ export function formatSessionTitle(date = new Date()) {
     return `${year}. ${month}. ${day}. (${weekday}) ${period} ${hour}:${minute}`;
 }
 
+export function formatRecordedAt(value) {
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "기록 일시 없음";
+    }
+
+    return formatSessionTitle(date);
+}
+
 export function formatMoney(amount) {
     return `${formatter.format(Number(amount) || 0)}원`;
 }
